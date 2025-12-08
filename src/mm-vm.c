@@ -27,28 +27,23 @@
  */
 struct vm_area_struct *get_vma_by_num(struct mm_struct *mm, int vmaid)
 {
-  struct vm_area_struct *pvma = mm->mmap;
+  struct vm_area_struct *pvma = mm->mmap; // start from head
 
   if (mm->mmap == NULL)
     return NULL;
 
   int vmait = pvma->vm_id;
 
-  while (vmait < vmaid)
-  {
-    if (pvma == NULL)
-      return NULL;
-
+  /* Traverse until we find an area whose vm_id is >= vmaid */
+  while (pvma != NULL && pvma->vm_id < vmaid) {  // ← Check NULL trước!
     pvma = pvma->vm_next;
-    vmait = pvma->vm_id;
   }
-
   return pvma;
 }
 
 int __mm_swap_page(struct pcb_t *caller, addr_t vicfpn , addr_t swpfpn)
 {
-    __swap_cp_page(caller->krnl->mram, vicfpn, caller->krnl->active_mswp, swpfpn);
+    __swap_cp_page(caller->krnl->mram, vicfpn, caller->krnl->active_mswp, swpfpn); // Gọi hàm swap từ libmem 
     return 0;
 }
 
@@ -156,7 +151,39 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
 //  if (vm_map_ram(caller, area->rg_start, area->rg_end, 
 //                   old_end, incnumpage , newrg) < 0)
 //    return -1; /* Map the memory to MEMRAM */
+  int inc_amt = PAGING_PAGE_ALIGNSZ(inc_sz); // align size 
+  int incnumpage = inc_amt / PAGING_PAGESZ; // number of pages to alloc
 
+  // lấy region mới tại sbrk
+  struct vm_rg_struct *area = get_vm_area_node_at_brk(caller, vmaid, inc_sz, inc_amt);
+  if (area == NULL) {
+    return -1;
+  }
+  
+  // lấy vma hiện tại
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+  if (cur_vma == NULL) {
+    free(area);
+    return -1;
+  }
+  
+  // lưu lại giá trị cũ của vm_end
+  int old_end = cur_vma->vm_end;
+  // kiểm tra overlap
+  if (validate_overlap_vm_area(caller, vmaid, area->rg_start, area->rg_end) < 0) {
+    free(area);
+    return -1;
+  }
+  // mở rộng HEAP
+  cur_vma->vm_end = area->rg_end;
+  cur_vma->sbrk  = area->rg_end;
+
+  // map physical memory cho vungf mới
+  if (vm_map_ram(caller, area->rg_start, area->rg_end, old_end, incnumpage, area) < 0) {
+    free(area);
+    return -1;
+  }
+  
   return 0;
 }
 

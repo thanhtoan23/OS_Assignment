@@ -32,12 +32,13 @@ int MEMPHY_mv_csr(struct memphy_struct *mp, addr_t offset)
    while (numstep < offset && numstep < mp->maxsz)
    {
       /* Traverse sequentially */
-      mp->cursor = (mp->cursor + 1) % mp->maxsz;
+      mp->cursor = (mp->cursor + 1) % mp->maxsz;  // cursor moves step by step
       numstep++;
    }
 
    return 0;
 }
+
 
 /*
  *  MEMPHY_seq_read - read MEMPHY device
@@ -53,8 +54,8 @@ int MEMPHY_seq_read(struct memphy_struct *mp, addr_t addr, BYTE *value)
    if (!mp->rdmflg)
       return -1; /* Not compatible mode for sequential read */
 
-   MEMPHY_mv_csr(mp, addr);
-   *value = (BYTE)mp->storage[addr];
+   MEMPHY_mv_csr(mp, addr);  // move cursor to the address
+   *value = (BYTE)mp->storage[addr];  // read byte at the address
 
    return 0;
 }
@@ -70,10 +71,10 @@ int MEMPHY_read(struct memphy_struct *mp, addr_t addr, BYTE *value)
    if (mp == NULL)
       return -1;
 
-   if (mp->rdmflg)
-      *value = mp->storage[addr];
+   if (mp->rdmflg) //  check if RAM, damflag = 1
+      *value = mp->storage[addr]; // direct read
    else /* Sequential access device */
-      return MEMPHY_seq_read(mp, addr, value);
+      return MEMPHY_seq_read(mp, addr, value); 
 
    return 0;
 }
@@ -94,6 +95,7 @@ int MEMPHY_seq_write(struct memphy_struct *mp, addr_t addr, BYTE value)
       return -1; /* Not compatible mode for sequential read */
 
    MEMPHY_mv_csr(mp, addr);
+   if (addr < 0 || addr >= mp->maxsz) return -1; // boundary check
    mp->storage[addr] = value;
 
    return 0;
@@ -105,16 +107,19 @@ int MEMPHY_seq_write(struct memphy_struct *mp, addr_t addr, BYTE value)
  *  @addr: address
  *  @data: written data
  */
-int MEMPHY_write(struct memphy_struct *mp, addr_t addr, BYTE data)
+int MEMPHY_write(struct memphy_struct *mp, int addr, BYTE data)
 {
    if (mp == NULL)
       return -1;
 
-   if (mp->rdmflg)
+   if (mp->storage == NULL)     // ← Kiểm tra storage!
+      return -1;
+      
+   if (mp->rdmflg && addr < mp->maxsz)  // ←  Kiểm tra addr bounds!
       mp->storage[addr] = data;
-   else /* Sequential access device */
+   else
       return MEMPHY_seq_write(mp, addr, data);
-
+   
    return 0;
 }
 
@@ -125,15 +130,15 @@ int MEMPHY_write(struct memphy_struct *mp, addr_t addr, BYTE data)
 int MEMPHY_format(struct memphy_struct *mp, int pagesz)
 {
    /* This setting come with fixed constant PAGESZ */
-   int numfp = mp->maxsz / pagesz;
-   struct framephy_struct *newfst, *fst;
+   int numfp = mp->maxsz / pagesz; // ← Number of frames = Total size / Page size
+   struct framephy_struct *newfst, *fst; 
    int iter = 0;
 
    if (numfp <= 0)
       return -1;
 
    /* Init head of free framephy list */
-   fst = malloc(sizeof(struct framephy_struct));
+   fst = malloc(sizeof(struct framephy_struct)); 
    fst->fpn = iter;
    mp->free_fp_list = fst;
 
@@ -147,18 +152,20 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
       fst = newfst;
    }
 
+   mp->used_fp_list = NULL; // ← Khởi tạo used list
+
    return 0;
 }
 
 int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
 {
-   struct framephy_struct *fp = mp->free_fp_list;
+   struct framephy_struct *fp = mp->free_fp_list; // ← Lấy frame đầu
 
    if (fp == NULL)
       return -1;
 
-   *retfpn = fp->fpn;
-   mp->free_fp_list = fp->fp_next;
+   *retfpn = fp->fpn;//retfpn = frame number
+   mp->free_fp_list = fp->fp_next; // delete frame
 
    /* MEMPHY is iteratively used up until its exhausted
     * No garbage collector acting then it not been released
@@ -170,9 +177,17 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
 
 int MEMPHY_dump(struct memphy_struct *mp)
 {
-  /*TODO dump memphy contnt mp->storage
-   *     for tracing the memory content
-   */
+   /*TODO dump memphy content mp->storage
+    *     for tracing the memory content
+    */
+   printf("===== PHYSICAL MEMORY DUMP =====\n");
+   for (int i = 0; i < mp->maxsz; i++) {
+      if ((BYTE)mp->storage[i]) {  // Chỉ in byte khác 0
+         printf("BYTE %08x: %d\n", i, (BYTE)mp->storage[i]);
+      }
+   }
+   printf("===== PHYSICAL MEMORY END-DUMP =====\n");
+   
    return 0;
 }
 
