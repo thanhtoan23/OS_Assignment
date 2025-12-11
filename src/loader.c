@@ -3,6 +3,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "mm64.h"
 
 static uint32_t avail_pid = 1;
 
@@ -41,6 +42,11 @@ struct pcb_t * load(const char * path) {
 		(struct page_table_t*)malloc(sizeof(struct page_table_t));
 	proc->bp = PAGE_SIZE;
 	proc->pc = 0;
+	#ifdef MM_PAGING
+    proc->mm = (struct mm_struct *)malloc(sizeof(struct mm_struct));
+    init_mm(proc->mm, proc); 
+    #endif
+
 
 	/* Read process code from file */
 	FILE * file;

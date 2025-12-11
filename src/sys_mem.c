@@ -30,7 +30,26 @@ int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
    /* TODO THIS DUMMY CREATE EMPTY PROC TO AVOID COMPILER NOTIFY 
     *      need to be eliminated
 	*/
-   struct pcb_t *caller = malloc(sizeof(struct pcb_t));
+   struct pcb_t *caller = NULL;
+   struct queue_t *q;
+
+   q = krnl->running_list;
+   for (int i=0; i<q->size; ++i){
+        struct pcb_t *proc = q->proc[i];
+        if (proc->pid == pid){
+            caller = proc;
+            break;
+        }
+        
+   }
+
+
+   if (caller == NULL) {
+        printf("ERROR: Cannot find process with PID %d\n", pid);
+        return -1; 
+   }
+
+
 
    /*
     * @bksysnet: Please note in the dual spacing design
@@ -58,11 +77,13 @@ int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
             __mm_swap_page(caller, regs->a2, regs->a3);
             break;
    case SYSMEM_IO_READ:
-            MEMPHY_read(caller->krnl->mram, regs->a2, &value);
+            MEMPHY_read(krnl->mram, regs->a2, &value);
             regs->a3 = value;
+            printf("DEBUG CHECK READ: PID=%d read form Addr=%d -> Got Value=%d\n", 
+               pid, regs->a2, value);
             break;
    case SYSMEM_IO_WRITE:
-            MEMPHY_write(caller->krnl->mram, regs->a2, regs->a3);
+            MEMPHY_write(krnl->mram, regs->a2, regs->a3);
             break;
    default:
             printf("Memop code: %d\n", memop);

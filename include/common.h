@@ -110,6 +110,14 @@ struct pcb_t
 	// and this vale overwrites the default priority when it existed
 	uint32_t prio;
 #endif
+
+#ifdef MM_PAGING
+    struct mm_struct *mm;         
+    struct memphy_struct *mram;
+    struct memphy_struct **mswp;
+    struct memphy_struct *active_mswp;
+#endif
+
 	struct krnl_t *krnl;	
 	struct page_table_t *page_table; // Page table
 	uint32_t bp;			 // Break pointer
