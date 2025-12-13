@@ -41,7 +41,7 @@ typedef ARG_TYPE arg_t;
  *            based on the address mode
  */
 #ifdef MM64
-#define FORMAT_ARG "%llu"
+#define FORMAT_ARG "%lu"
 #else
 #define FORMAT_ARG "%u"
 #endif
@@ -104,15 +104,23 @@ struct pcb_t
 	char path[100];
 	struct code_seg_t *code; // Code segment
 	addr_t regs[10];	 // Registers, store address of allocated regions
-	uint32_t pc;		 // Program pointer, point to the next instruction
+	uint64_t pc;		 // Program pointer, point to the next instruction
 #ifdef MLQ_SCHED
 	// Priority on execution (if supported), on-fly aka. changeable
 	// and this vale overwrites the default priority when it existed
 	uint32_t prio;
 #endif
+
+#ifdef MM_PAGING
+    struct mm_struct *mm;         
+    struct memphy_struct *mram;
+    struct memphy_struct **mswp;
+    struct memphy_struct *active_mswp;
+#endif
+
 	struct krnl_t *krnl;	
 	struct page_table_t *page_table; // Page table
-	uint32_t bp;			 // Break pointer
+	uint64_t bp;			 // Break pointer
 };
 
 /* Kernel structure */

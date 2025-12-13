@@ -19,7 +19,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <pthread.h>
-
+#include "mm64.h"
 /*get_vma_by_num - get vm area by numID
  *@mm: memory region
  *@vmaid: ID vm area to alloc memory region
@@ -27,17 +27,19 @@
  */
 struct vm_area_struct *get_vma_by_num(struct mm_struct *mm, int vmaid)
 {
+  
   struct vm_area_struct *pvma = mm->mmap; // start from head
-
+  
   if (mm->mmap == NULL)
     return NULL;
 
   int vmait = pvma->vm_id;
 
   /* Traverse until we find an area whose vm_id is >= vmaid */
-  while (pvma != NULL && pvma->vm_id < vmaid) {  // ← Check NULL trước!
+  while (pvma != NULL && pvma->vm_id < vmaid) {  
     pvma = pvma->vm_next;
   }
+  
   return pvma;
 }
 
@@ -129,6 +131,7 @@ int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, addr_t vmastart, a
  */
 int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
 {
+  printf("Syscall dc goi \n");
   //struct vm_rg_struct * newrg = malloc(sizeof(struct vm_rg_struct));
 
   /* TOTO with new address scheme, the size need tobe aligned 
@@ -151,8 +154,8 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
 //  if (vm_map_ram(caller, area->rg_start, area->rg_end, 
 //                   old_end, incnumpage , newrg) < 0)
 //    return -1; /* Map the memory to MEMRAM */
-  int inc_amt = PAGING_PAGE_ALIGNSZ(inc_sz); // align size 
-  int incnumpage = inc_amt / PAGING_PAGESZ; // number of pages to alloc
+  int inc_amt = PAGING64_PAGE_ALIGNSZ(inc_sz); // align size 
+  int incnumpage = inc_amt / PAGING64_PAGESZ; // number of pages to alloc
 
   // lấy region mới tại sbrk
   struct vm_rg_struct *area = get_vm_area_node_at_brk(caller, vmaid, inc_sz, inc_amt);
@@ -177,13 +180,24 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
   // mở rộng HEAP
   cur_vma->vm_end = area->rg_end;
   cur_vma->sbrk  = area->rg_end;
-
+  printf("vm_end sau khi mo rong: %d \n", cur_vma->vm_end);
   // map physical memory cho vungf mới
+
+  printf("Map area start: %d \n", area->rg_start);
+  printf("Map area end: %d \n", area->rg_end);
+  printf("So page cap phat: %d \n", incnumpage);
+  struct memphy_struct *temp = caller->krnl->mram;
+  struct framephy_struct *fp = temp->free_fp_list;
+  printf("So free frame ------------------------------------------\n");
+  while(fp != NULL){
+    printf("Free frame fp: %d \n",fp->fpn);
+    fp=fp->fp_next;
+  }
   if (vm_map_ram(caller, area->rg_start, area->rg_end, old_end, incnumpage, area) < 0) {
     free(area);
     return -1;
   }
-  
+  printf("Da map physical memory \n");
   return 0;
 }
 
