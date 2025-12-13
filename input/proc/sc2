@@ -1,6 +1,5 @@
-10 5
-alloc 64 1
+10 4
+alloc 8000 1
 write 99 1 0
-read 1 0 2
-write 123 1 10
-read 1 10 3
+write 120 1 2
+write 230 1 3
