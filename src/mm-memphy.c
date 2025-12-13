@@ -14,10 +14,11 @@
  * Memory physical module mm/mm-memphy.c
  */
 
-#include "mm.h"
+// #include "mm.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include "mm64.h"
 
 /*
  *  MEMPHY_mv_csr - move MEMPHY cursor
@@ -107,7 +108,7 @@ int MEMPHY_seq_write(struct memphy_struct *mp, addr_t addr, BYTE value)
  *  @addr: address
  *  @data: written data
  */
-int MEMPHY_write(struct memphy_struct *mp, int addr, BYTE data)
+int MEMPHY_write(struct memphy_struct *mp, addr_t addr, BYTE data)
 {
    if (mp == NULL)
       return -1;
@@ -131,6 +132,8 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
 {
    /* This setting come with fixed constant PAGESZ */
    int numfp = mp->maxsz / pagesz; // ← Number of frames = Total size / Page size
+   printf("So luong frame trong RAM: %d\n",numfp);
+
    struct framephy_struct *newfst, *fst; 
    int iter = 0;
 
@@ -143,6 +146,8 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
    mp->free_fp_list = fst;
 
    /* We have list with first element, fill in the rest num-1 element member*/
+   
+   
    for (iter = 1; iter < numfp; iter++)
    {
       newfst = malloc(sizeof(struct framephy_struct));
@@ -151,7 +156,7 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
       fst->fp_next = newfst;
       fst = newfst;
    }
-
+   
    mp->used_fp_list = NULL; // ← Khởi tạo used list
 
    return 0;
@@ -160,9 +165,10 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
 int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
 {
    struct framephy_struct *fp = mp->free_fp_list; // ← Lấy frame đầu
-
-   if (fp == NULL)
+   if (fp == NULL){
       return -1;
+   }
+      
 
    *retfpn = fp->fpn;//retfpn = frame number
    mp->free_fp_list = fp->fp_next; // delete frame
@@ -181,8 +187,9 @@ int MEMPHY_dump(struct memphy_struct *mp)
     *     for tracing the memory content
     */
    printf("===== PHYSICAL MEMORY DUMP =====\n");
+   printf("masz : %d \n",mp->maxsz);
    for (int i = 0; i < mp->maxsz; i++) {
-      if ((BYTE)mp->storage[i]) {  // Chỉ in byte khác 0
+      if ((BYTE)mp->storage[i]) {  
          printf("BYTE %08x: %d\n", i, (BYTE)mp->storage[i]);
       }
    }
@@ -213,7 +220,7 @@ int init_memphy(struct memphy_struct *mp, addr_t max_size, int randomflg)
    mp->maxsz = max_size;
    memset(mp->storage, 0, max_size * sizeof(BYTE));
 
-   MEMPHY_format(mp, PAGING_PAGESZ);
+   MEMPHY_format(mp, PAGING64_PAGESZ);
 
    mp->rdmflg = (randomflg != 0) ? 1 : 0;
 
