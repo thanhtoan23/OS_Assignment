@@ -257,11 +257,12 @@ addr_t vmap_page_range(struct pcb_t *caller,
 {
   struct framephy_struct *fpit = frames;
   int pgit = 0;
-  addr_t pgn = PAGING_PGN(addr);
-
+  printf("Toi co goi page_range nha --------------------------------\n");
+  addr_t pgn = PAGING64_ADDR_PGD(addr);
+  
   /* Update the mapped region information */
   ret_rg->rg_start = addr;
-  ret_rg->rg_end = addr + pgnum * PAGING_PAGESZ;
+  ret_rg->rg_end = addr + pgnum * PAGING64_PAGESZ;
 
   /* Map range of frames to address space */
   for (pgit = 0; pgit < pgnum; pgit++)
@@ -279,23 +280,19 @@ addr_t vmap_page_range(struct pcb_t *caller,
   return 0;
 }
 
-/*
- * alloc_pages_range - allocate req_pgnum of frame in ram
- * [cite: 578, 471]
- */
 addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct **frm_lst)
 {
-  int pgit;
   int ret_fpn;
   struct framephy_struct *newfp_str;
   struct framephy_struct *last_fp = NULL;
   
   *frm_lst = NULL;
+  struct memphy_struct *temp = caller->krnl->mram;
+  struct framephy_struct *fp = temp->free_fp_list;
 
-  for (pgit = 0; pgit < req_pgnum; pgit++)
-  {
+  for (addr_t pgit = 0; pgit < req_pgnum; pgit++){
     newfp_str = malloc(sizeof(struct framephy_struct));
-    
+
     // Lock access to global Physical Memory Manager (MEMPHY)
     pthread_mutex_lock(&mm_lock);
     int res = MEMPHY_get_freefp(caller->krnl->mram, (addr_t *)&ret_fpn);
@@ -312,11 +309,15 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
           last_fp->fp_next = newfp_str;
       }
       last_fp = newfp_str;
+
+      printf("Dem %d \n",pgit);
     }
     else
     { 
       // Rollback not implemented for simplicity, but critical error
+      printf("Day ne %d\n",req_pgnum);
       return -3000; // Out of memory code defined in vm_map_ram
+      
     }
   }
 
@@ -328,6 +329,7 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
  */
 addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapstart, int incpgnum, struct vm_rg_struct *ret_rg)
 {
+  printf("TOi co goi map_ram nha ------------------------------------------------\n");
   struct framephy_struct *frm_lst = NULL;
   addr_t ret_alloc = 0;
   int pgnum = incpgnum;
@@ -339,6 +341,7 @@ addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapst
 
   if (ret_alloc == -3000)
   {
+    printf("Het memory \n");
     return -1; // Out of Memory
   }
 
@@ -522,7 +525,7 @@ int print_pgtbl(struct pcb_t *caller, addr_t start, addr_t end)
   }
   
   // Start recursion from PGD (Level 5)
-  print_pgtbl_recursive(caller->krnl->mm->pgd, 5, 0);
+  print_pgtbl_recursive(caller->mm->pgd, 5, 0);
 
   return 0;
 }

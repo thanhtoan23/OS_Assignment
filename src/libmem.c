@@ -74,7 +74,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
   /*Allocate at the toproof */
   pthread_mutex_lock(&mmvm_lock);
   struct vm_rg_struct rgnode;
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
   int inc_sz=0;
   
 
@@ -107,13 +107,10 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
 #else
   inc_sz = PAGING_PAGE_ALIGNSZ(size);
   
-#endif
-  
+#endif  
   int old_sbrk;
   inc_sz = inc_sz + 1;
-  
   old_sbrk = cur_vma->sbrk;
-  
   /* TODO INCREASE THE LIMIT
    * SYSCALL 1 sys_memmap
    */
@@ -123,22 +120,28 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
 
 #ifdef MM64
   //regs.a3 = size;
-  if (size % PAGING_PAGESZ == 0) {
-      regs.a3 = size;
-  } else {
-      regs.a3 = ((size / PAGING_PAGESZ) + 1) * PAGING_PAGESZ;
-  }
+  regs.a3 = PAGING64_PAGE_ALIGNSZ(size);
 #else
   regs.a3 = PAGING_PAGE_ALIGNSZ(size);
 #endif  
   
   syscall(caller->krnl, caller->pid, 17, &regs); /* SYSCALL 17 sys_memmap */
-
+  int new_sbrk = cur_vma->sbrk;
+  struct vm_rg_struct *new_rg_free = init_vm_rg(old_sbrk, new_sbrk);
+  enlist_vm_rg_node(&cur_vma->vm_freerg_list, new_rg_free);
   /*Successful increase limit */
-  caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
-  caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
-  cur_vma->sbrk += regs.a3;
-  *alloc_addr = old_sbrk;
+  // printf("old sbrk: %d \n",old_sbrk);
+  // printf("New sbrk: %d \n",new_sbrk);
+  if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0){
+    caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
+    caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
+    *alloc_addr = old_sbrk;
+  }
+  // printf("Da cap phat cho caller \n");
+  // printf("caller start: %d \n", caller->mm->symrgtbl[rgid].rg_start );
+  // printf("caller end: %d \n", caller->mm->symrgtbl[rgid].rg_end );
+
+
 
   pthread_mutex_unlock(&mmvm_lock);
   return 0;
@@ -199,6 +202,7 @@ int liballoc(struct pcb_t *proc, addr_t size, uint32_t reg_index)
   {
     return -1;
   }
+  proc->regs[reg_index] = addr;
 #ifdef IODUMP
   /* TODO dump IO content (if needed) */
 #ifdef PAGETBL_DUMP
@@ -579,7 +583,7 @@ int free_pcb_memph(struct pcb_t *caller)
 
   for (pagenum = 0; pagenum < PAGING_MAX_PGN; pagenum++)
   {
-    pte = caller->mm->pgd[pagenum];
+    pte = pte_get_entry(caller,pagenum);
 
     if (PAGING_PAGE_PRESENT(pte))
     {
@@ -634,13 +638,18 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn)
  */
 int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_struct *newrg)
 {
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
 
   struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
-
+ struct vm_rg_struct *rgit2 = cur_vma->vm_freerg_list;
   if (rgit == NULL)
     return -1;
 
+  // while( rgit2 != NULL){
+  //   printf(" rgit start: %d \n",rgit2->rg_start);
+  //   printf(" rgit end: %d \n",rgit2->rg_end);
+  //   rgit2 = rgit2->rg_next;
+  // }
   /* Probe unintialized newrg */
   newrg->rg_start = newrg->rg_end = -1;
 
@@ -686,8 +695,11 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
     }
   }
 
-  if (newrg->rg_start == -1) // new region not found
+  if (newrg->rg_start == -1){
+    printf("Region not found \n");
     return -1;
+  } // new region not found
+    
 
   return 0;
 }
