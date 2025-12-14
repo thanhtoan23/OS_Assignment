@@ -183,9 +183,9 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
   printf("vm_end sau khi mo rong: %d \n", cur_vma->vm_end);
   // map physical memory cho vungf mới
 
-  // printf("Map area start: %d \n", area->rg_start);
-  // printf("Map area end: %d \n", area->rg_end);
-  // printf("So page cap phat: %d \n", incnumpage);
+  printf("Map area start: %d \n", area->rg_start);
+  printf("Map area end: %d \n", area->rg_end);
+  printf("So page cap phat: %d \n", incnumpage);
   struct memphy_struct *temp = caller->krnl->mram;
   struct framephy_struct *fp = temp->free_fp_list;
   if (vm_map_ram(caller, area->rg_start, area->rg_end, old_end, incnumpage, area) < 0) {
