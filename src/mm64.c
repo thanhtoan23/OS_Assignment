@@ -114,10 +114,14 @@ static addr_t *__get_pte_ptr(struct mm_struct *mm, addr_t pgn, int alloc) {
     if (mm->pgd == NULL) return NULL;
     
     addr_t *p4d_table = (addr_t *)mm->pgd[pgd_idx];
+    
     if (p4d_table == NULL) {
+        
         if (!alloc) return NULL;
+        
         p4d_table = alloc_table_level();
         mm->pgd[pgd_idx] = (addr_t)p4d_table;
+        //////////////////////////////////////////////////////////////////////////////////////
     }
 
     // 3. Traverse P4D (Level 4)
@@ -329,7 +333,6 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
  */
 addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapstart, int incpgnum, struct vm_rg_struct *ret_rg)
 {
-  printf("TOi co goi map_ram nha ------------------------------------------------\n");
   struct framephy_struct *frm_lst = NULL;
   addr_t ret_alloc = 0;
   int pgnum = incpgnum;
@@ -499,7 +502,6 @@ int print_list_pgn(struct pgn_t *ip)
 /* Helper to recursively print page table entries */
 void print_pgtbl_recursive(addr_t *table, int level, addr_t current_prefix) {
     if (table == NULL) return;
-    
     int i;
     for (i = 0; i < 512; i++) {
         if (table[i] == 0) continue;
@@ -523,9 +525,11 @@ int print_pgtbl(struct pcb_t *caller, addr_t start, addr_t end)
       printf("Page table not initialized.\n");
       return -1;
   }
+
+
   
   // Start recursion from PGD (Level 5)
-  print_pgtbl_recursive(caller->mm->pgd, 5, 0);
+  print_pgtbl_recursive(caller->krnl->mm->pgd, 5, 0);
 
   return 0;
 }
