@@ -109,7 +109,7 @@ static addr_t *__get_pte_ptr(struct mm_struct *mm, addr_t pgn, int alloc) {
     
     // 1. Calculate indices
     get_pd_from_pagenum(pgn, &pgd_idx, &p4d_idx, &pud_idx, &pmd_idx, &pt_idx);
-
+    
     // 2. Traverse PGD (Level 5)
     if (mm->pgd == NULL) return NULL;
     
@@ -261,9 +261,10 @@ addr_t vmap_page_range(struct pcb_t *caller,
 {
   struct framephy_struct *fpit = frames;
   int pgit = 0;
-  printf("Toi co goi page_range nha --------------------------------\n");
-  addr_t pgn = PAGING64_ADDR_PGD(addr);
-  
+  //printf("Toi co goi page_range nha --------------------------------\n");
+  addr_t pgn = PAGING64_PGN(addr);
+
+  printf("Page num %lu -> Address: %lu \n",pgn,addr);
   /* Update the mapped region information */
   ret_rg->rg_start = addr;
   ret_rg->rg_end = addr + pgnum * PAGING64_PAGESZ;
@@ -313,8 +314,6 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
           last_fp->fp_next = newfp_str;
       }
       last_fp = newfp_str;
-
-      printf("Dem %d \n",pgit);
     }
     else
     { 
