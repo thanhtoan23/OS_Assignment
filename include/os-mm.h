@@ -38,7 +38,7 @@ typedef ADDR_TYPE addr_t;
  *            based on the address mode
  */
 #ifdef MM64
-#define FORMAT_ADDR "%lld"
+#define FORMAT_ADDR "%ld"
 #define FORMATX_ADDR "%16llx"
 #else
 #define FORMAT_ADDR "%d"

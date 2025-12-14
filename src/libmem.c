@@ -406,7 +406,7 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 
   // BƯỚC 3: Tính địa chỉ vật lý (Physical Address)
   // PA = (FPN * PAGE_SIZE) + offset
-  int phyaddr = (fpn * PAGING_PAGESZ) + off;
+  int phyaddr = (fpn * PAGING64_PAGESZ) + off;
 
   // BƯỚC 4: Đọc byte từ RAM bằng syscall
   struct sc_regs regs;
@@ -463,7 +463,7 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
 
   // BƯỚC 3: Tính địa chỉ vật lý (Physical Address)
   // PA = (FPN * PAGE_SIZE) + offset
-  int phyaddr = (fpn * PAGING_PAGESZ) + off;
+  int phyaddr = (fpn * PAGING64_PAGESZ) + off;
 
   // BƯỚC 4: Ghi byte vào RAM bằng syscall
   struct sc_regs regs;
