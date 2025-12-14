@@ -54,7 +54,7 @@ int enlist_vm_freerg_list(struct mm_struct *mm, struct vm_rg_struct *rg_elmt)
  */
 struct vm_rg_struct *get_symrg_byid(struct mm_struct *mm, int rgid)
 {
-  if (rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ)
+  if (mm == NULL || rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ)
     return NULL;
 
   return &mm->symrgtbl[rgid];
@@ -173,6 +173,7 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
+
   struct vm_rg_struct *freerg_node = malloc(sizeof(struct vm_rg_struct));
   freerg_node->rg_start = rgnode->rg_start;
   freerg_node->rg_end = rgnode->rg_end;
@@ -487,16 +488,30 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
  *@size: allocated size
  *
  */
+// int __read(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE *data)
+// {
+//   struct vm_rg_struct *currg = get_symrg_byid(caller->mm, rgid);
+
+//   /* TODO Invalid memory identify */
+
+//   pg_getval(caller->mm, currg->rg_start + offset, data, caller);
+
+//   return 0;
+// 
 int __read(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE *data)
 {
+  pthread_mutex_lock(&mmvm_lock);
+  
   struct vm_rg_struct *currg = get_symrg_byid(caller->mm, rgid);
-
-//  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
-
-  /* TODO Invalid memory identify */
-
+  
+  if (currg == NULL) {
+    pthread_mutex_unlock(&mmvm_lock);
+    return -1;
+  }
+  
   pg_getval(caller->mm, currg->rg_start + offset, data, caller);
-
+  
+  pthread_mutex_unlock(&mmvm_lock);
   return 0;
 }
 
@@ -538,6 +553,14 @@ int __write(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE value
 
   if (currg == NULL || cur_vma == NULL) /* Invalid memory identify */
   {
+    pthread_mutex_unlock(&mmvm_lock);
+    return -1;
+  }
+  
+  // Check bounds
+  if (currg->rg_start + offset >= currg->rg_end) {
+    printf("ERROR: Write offset %d out of bounds [%d, %d)\n", 
+           offset, currg->rg_start, currg->rg_end);
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
