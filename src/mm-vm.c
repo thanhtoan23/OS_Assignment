@@ -131,7 +131,7 @@ int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, addr_t vmastart, a
  */
 int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
 {
-  printf("Syscall dc goi \n");
+  // printf("Syscall dc goi \n");
   //struct vm_rg_struct * newrg = malloc(sizeof(struct vm_rg_struct));
 
   /* TOTO with new address scheme, the size need tobe aligned 
@@ -188,16 +188,11 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
   printf("So page cap phat: %d \n", incnumpage);
   struct memphy_struct *temp = caller->krnl->mram;
   struct framephy_struct *fp = temp->free_fp_list;
-  printf("So free frame ------------------------------------------\n");
-  while(fp != NULL){
-    printf("Free frame fp: %d \n",fp->fpn);
-    fp=fp->fp_next;
-  }
   if (vm_map_ram(caller, area->rg_start, area->rg_end, old_end, incnumpage, area) < 0) {
     free(area);
     return -1;
   }
-  printf("Da map physical memory \n");
+  
   return 0;
 }
 

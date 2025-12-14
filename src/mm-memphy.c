@@ -132,7 +132,7 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
 {
    /* This setting come with fixed constant PAGESZ */
    int numfp = mp->maxsz / pagesz; // ← Number of frames = Total size / Page size
-   printf("So luong frame trong RAM: %d\n",numfp);
+   //("So luong frame trong RAM: %d\n",numfp);
 
    struct framephy_struct *newfst, *fst; 
    int iter = 0;
