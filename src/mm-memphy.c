@@ -55,6 +55,9 @@ int MEMPHY_seq_read(struct memphy_struct *mp, addr_t addr, BYTE *value)
    if (!mp->rdmflg)
       return -1; /* Not compatible mode for sequential read */
 
+   if (addr < 0 || addr >= mp->maxsz) 
+      return -1; // boundary check
+
    MEMPHY_mv_csr(mp, addr);  // move cursor to the address
    *value = (BYTE)mp->storage[addr];  // read byte at the address
 
@@ -71,6 +74,9 @@ int MEMPHY_read(struct memphy_struct *mp, addr_t addr, BYTE *value)
 {
    if (mp == NULL)
       return -1;
+
+   if (addr < 0 || addr >= mp->maxsz)
+      return -1; // boundary check
 
    if (mp->rdmflg) //  check if RAM, damflag = 1
       *value = mp->storage[addr]; // direct read
