@@ -19,8 +19,9 @@ static int timer_stop = 0;
 
 
 static void * timer_routine(void * args) {
+	printf("Time slot %3llu\n", current_time()); // Thêm cái này
 	while (!timer_stop) {
-		printf("Time slot %3llu\n", current_time());
+		//printf("Time slot %3llu\n", current_time()); Xóa cái này
 		int fsh = 0;
 		int event = 0;
 		/* Wait for all devices have done the job in current
@@ -41,8 +42,17 @@ static void * timer_routine(void * args) {
 			pthread_mutex_unlock(&temp->id.event_lock);
 		}
 
+		// Kéo lên đây
+		if (fsh == event) {
+			break;
+		}
+
 		/* Increase the time slot */
 		_time++;
+
+		// Thêm cái này
+        printf("Time slot %3llu\n", current_time());
+        fflush(stdout);
 		
 		/* Let devices continue their job */
 		for (temp = dev_list; temp != NULL; temp = temp->next) {
@@ -51,9 +61,10 @@ static void * timer_routine(void * args) {
 			pthread_cond_signal(&temp->id.timer_cond);
 			pthread_mutex_unlock(&temp->id.timer_lock);
 		}
+		/* Đẩy lên trên
 		if (fsh == event) {
 			break;
-		}
+		}*/
 	}
 	pthread_exit(args);
 }

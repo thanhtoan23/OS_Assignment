@@ -64,12 +64,12 @@ struct pcb_t * get_mlq_proc(void) {
 
 
 	int retry_count = 0;
-	const int MAX_RETRIES = 5;
+	const int MAX_RETRIES = 2;
 
 	while (queue_empty() && retry_count < MAX_RETRIES) {
-		pthread_mutex_unlock(&queue_lock); // Nhả khóa cho Loader chạy
-		usleep(1000); // Ngủ 1ms
-		pthread_mutex_lock(&queue_lock);   // Lấy lại khóa để kiểm tra tiếp
+		pthread_mutex_unlock(&queue_lock); 
+		usleep(1000); 
+		pthread_mutex_lock(&queue_lock);  
 		retry_count++;
 	}
 
