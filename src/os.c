@@ -129,7 +129,7 @@ static void * ld_routine(void * args) {
 		}
 #ifdef MM_PAGING
 		krnl->mm = malloc(sizeof(struct mm_struct));
-		init_mm(krnl->mm, proc);
+		init_mm(proc->mm, proc);
 		krnl->mram = mram;
 		krnl->mswp = mswp;
 		krnl->active_mswp = active_mswp;

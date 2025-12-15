@@ -640,7 +640,7 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
 
   vma0->vm_id = 0;
   vma0->vm_start = 0;
-  vma0->vm_end = PAGING_MEMRAMSZ; // Giả sử vma0 có thể lớn tối đa = RAM
+  vma0->vm_end = vma0->vm_start; // Giả sử vma0 có thể lớn tối đa = RAM
   vma0->sbrk = vma0->vm_start;
   vma0->vm_next = NULL;
   vma0->vm_mm = mm; // Trỏ ngược lại mm
@@ -782,27 +782,31 @@ int print_list_pgn(struct pgn_t *ip)
   return 0;
 }
 
+/* Helper to recursively print page table entries */
+void print_pgtbl_recursive(addr_t *table, int level, addr_t current_prefix) {
+    if (table == NULL) return;
+    int i;
+    for (i = 0; i < 512; i++) {
+        if (table[i] == 0) continue;
+
+        if (level == 1) { // PT Level, table[i] is PTE
+             printf("  %05lx: [%08x] (FPN: %ld)\n", 
+                    (current_prefix << 9) | i, 
+                    (uint32_t)table[i], 
+                    PAGING_FPN(table[i]));
+        } else {
+             // Intermediate levels, table[i] is pointer to next table
+             print_pgtbl_recursive((addr_t *)table[i], level - 1, (current_prefix << 9) | i);
+        }
+    }
+}
+
 int print_pgtbl(struct pcb_t *caller, addr_t start, addr_t end)
 {
-//  addr_t pgn_start;//, pgn_end;
-//  addr_t pgit;
-//  struct krnl_t *krnl = caller->krnl;
-
-  // addr_t pgd=0;
-  // addr_t p4d=0;
-  // addr_t pud=0;
-  // addr_t pmd=0;
-  // addr_t pt=0;
-
-  // get_pd_from_address(start, &pgd, &p4d, &pud, &pmd, &pt);
-
-  // /* TODO traverse the page map and dump the page directory entries */
-
-  // return 0;
-  //my implementation
-  if (caller == NULL || caller->krnl == NULL || caller->krnl->mm == NULL || caller->krnl->mm->pgd == NULL){
-    printf("print_pgtbl: Error - PCB, kernel, or MM is NULL.\n");
-    return -1;
+  printf("Page Table Dump for PID %d:\n", caller->pid);
+  if (caller == NULL || caller->krnl == NULL || caller->krnl->mm == NULL || caller->krnl->mm->pgd == NULL) {
+      printf("Page table not initialized.\n");
+      return -1;
   }
 
   struct krnl_t *krnl = caller->krnl;
@@ -821,7 +825,11 @@ int print_pgtbl(struct pcb_t *caller, addr_t start, addr_t end)
        (unsigned long)krnl->mm->pgd, 
        (unsigned long)p4d_table, 
        (unsigned long)pud_table, 
-       (unsigned long)pmd_table);  
+       (unsigned long)pmd_table);
+  
+  // Start recursion from PGD (Level 5)
+  print_pgtbl_recursive(caller->krnl->mm->pgd, 5, 0);
+
   return 0;
 }
 

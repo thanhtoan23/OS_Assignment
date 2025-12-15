@@ -74,7 +74,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
   /*Allocate at the toproof */
   pthread_mutex_lock(&mmvm_lock);
   struct vm_rg_struct rgnode;
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   int inc_sz=0;
   
 
@@ -293,80 +293,261 @@ printf("%s:%d\n",__func__,__LINE__);
 
 //   return 0;
 // }
+// int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
+
+// {
+
+//   uint32_t pte = pte_get_entry(caller, pgn);
+
+
+
+//   if (!PAGING_PAGE_PRESENT(pte))
+
+//   { /* Page is not online, make it actively living */
+
+//     addr_t vicpgn, swpfpn;
+
+//     addr_t vicfpn;
+
+//     uint32_t vicpte;
+
+//     struct sc_regs regs;
+
+
+
+//     /* Initialize the target frame storing our variable */
+
+//     addr_t tgtfpn;
+
+
+
+//     /* Find victim page */
+
+//     if (find_victim_page(caller->krnl->mm, &vicpgn) == -1)
+
+//     {
+
+//       printf("ERROR: Cannot find victim page\n");
+
+//       return -1;
+
+//     }
+
+
+
+//     /* Get victim page's PTE and FPN */
+
+//     vicpte = pte_get_entry(caller, vicpgn);
+
+//     vicfpn = PAGING_FPN(vicpte);
+
+
+
+//     /* Get free frame in MEMSWP */
+
+//     if (MEMPHY_get_freefp(caller->krnl->active_mswp, &swpfpn) == -1)
+
+//     {
+
+//       printf("ERROR: Cannot get free frame in SWAP\n");
+
+//       return -1;
+
+//     }
+
+
+
+//     /* Copy victim frame to swap using syscall */
+
+//     regs.a1 = SYSMEM_SWP_OP;
+
+//     regs.a2 = vicfpn;
+
+//     regs.a3 = swpfpn;
+
+//     syscall(caller->krnl, caller->pid, 17, &regs);
+
+
+
+//     /* Update victim page table entry to swap */
+
+//     pte_set_swap(caller, vicpgn, 0, swpfpn);
+
+
+
+//     /* Now use the freed frame for our page */
+
+//     tgtfpn = vicfpn;
+
+
+
+//     /* If the current page is in swap, bring it back */
+
+//     if (PAGING_PAGE_PRESENT(pte) && (pte & PAGING_PTE_SWAPPED_MASK))
+
+//     {
+
+//       addr_t old_swpfpn = PAGING_SWP(pte);
+
+      
+
+//       /* Swap from MEMSWP to MEMRAM */
+
+//       regs.a1 = SYSMEM_SWP_OP;
+
+//       regs.a2 = old_swpfpn;
+
+//       regs.a3 = tgtfpn;
+
+//       syscall(caller->krnl, caller->pid, 17, &regs);
+
+
+
+//       /* Return the swap frame */
+
+//       MEMPHY_put_freefp(caller->krnl->active_mswp, old_swpfpn);
+
+//     }
+
+
+
+//     /* Update its online status of the target page */
+
+//     pte_set_fpn(caller, pgn, tgtfpn);
+
+
+
+//     enlist_pgn_node(&caller->krnl->mm->fifo_pgn, pgn);
+
+//   }
+
+
+
+//   *fpn = PAGING_FPN(pte_get_entry(caller, pgn));
+
+
+
+//   return 0;
+
+// }
+
+/*pg_getpage - get the page in ram
+ * @mm: memory region
+ * @pagenum: PGN
+ * @framenum: return FPN
+ * @caller: caller
+ */
 int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 {
-  // BƯỚC 1: Lấy PTE (Page Table Entry) của trang
-  uint32_t pte = pte_get_entry(caller, pgn);
+    uint32_t old_pte = pte_get_entry(caller, pgn);
 
-  // BƯỚC 2: Check xem trang này có ở RAM không?
-  if (!PAGING_PAGE_PRESENT(pte))
-  { 
-    /* PAGE FAULT! Trang không ở RAM → phải SWAP */
-    
-    addr_t vicpgn;           // Victim page number (trang cũ nhất)
-    addr_t vicfpn;           // Victim frame number (frame của trang cũ)
-    addr_t swpfpn;           // Frame trong SWAP device
-    uint32_t vicpte;         // PTE của victim page
-    
-    // BƯỚC 2.1: Tìm victim page (trang cũ nhất theo FIFO)
-    if (find_victim_page(caller->mm, &vicpgn) == -1)
-    {
-      return -1;
+    if (!PAGING_PAGE_PRESENT(old_pte))
+    { 
+        /* Xảy ra Page Fault: Trang không có trong RAM */
+        addr_t tgtfpn; // Target Frame Page Number
+        struct sc_regs regs; // Dùng cho System Call
+
+        // Kiểm tra xem trang này có đang nằm trong SWAP không (Khả năng 1)
+        int is_swapped = (old_pte & PAGING_PTE_SWAPPED_MASK);
+        addr_t old_swpfpn = 0;
+        if (is_swapped) {
+            old_swpfpn = PAGING_SWP(old_pte); // Lấy địa chỉ swap cũ
+        }
+        
+        // --- 1. CỐ GẮNG LẤY FRAME TRỐNG TRONG RAM ---
+        if (MEMPHY_get_freefp(caller->krnl->mram, &tgtfpn) == 0) 
+        {
+            // RAM còn chỗ! Dùng frame này ngay.
+            if (is_swapped) 
+            {
+                /* Trường hợp 1: Trang đã bị Swap Out, giờ Swap In về Frame trống */
+                
+                // Swap từ MEMSWP (old_swpfpn) sang MEMRAM (tgtfpn)
+                regs.a1 = SYSMEM_SWP_OP;
+                regs.a2 = old_swpfpn;
+                regs.a3 = tgtfpn;
+                // PHẢI DÙNG SYSCALL vì di chuyển dữ liệu vật lý từ thiết bị Swap vào RAM
+                syscall(caller->krnl, caller->pid, 17, &regs); 
+                
+                // Trả frame swap cũ về danh sách trống của Swap
+                MEMPHY_put_freefp(caller->krnl->active_mswp, old_swpfpn);
+
+            } 
+            else 
+            {
+                /* Trường hợp 2: Trang chưa từng được cấp phát/không nằm trong Swap (Lần đầu) */
+                // Không cần di chuyển dữ liệu, Frame trống là đủ.
+            }
+            
+            // Cập nhật PTE mới để trỏ đến Frame vật lý mới (tgtfpn) và đánh dấu Present
+            pte_set_fpn(caller, pgn, tgtfpn); 
+
+        } 
+        else 
+        {
+            // --- 2. RAM ĐÃ ĐẦY! PHẢI TÌM VICTIM ĐỂ SWAP OUT ---
+            addr_t vicpgn, vicfpn, swpfpn;
+            uint32_t vicpte;
+
+            /* Tìm victim page */
+            if (find_victim_page(caller->krnl->mm, &vicpgn) == -1) {
+                printf("ERROR: Cannot find victim page\n");
+                return -1;
+            }
+
+            /* Lấy PTE và FPN của victim */
+            vicpte = pte_get_entry(caller, vicpgn);
+            vicfpn = PAGING_FPN(vicpte);
+
+            /* Lấy free frame trong MEMSWP cho victim */
+            if (MEMPHY_get_freefp(caller->krnl->active_mswp, &swpfpn) == -1) {
+                printf("ERROR: Cannot get free frame in SWAP\n");
+                return -1;
+            }
+
+            /* Swap Out: Copy victim frame (vicfpn) đến swap (swpfpn) */
+            regs.a1 = SYSMEM_SWP_OP;
+            regs.a2 = vicfpn;
+            regs.a3 = swpfpn;
+            // PHẢI DÙNG SYSCALL vì di chuyển dữ liệu vật lý từ RAM ra thiết bị Swap
+            syscall(caller->krnl, caller->pid, 17, &regs);
+
+            /* Cập nhật PTE của victim để trỏ đến Swap */
+            pte_set_swap(caller, vicpgn, 0, swpfpn);
+
+            /* Frame của victim (vicfpn) giờ là Frame mục tiêu (tgtfpn) */
+            tgtfpn = vicfpn;
+
+            // --- XỬ LÝ TRANG HIỆN TẠI VÀO FRAME MỚI (tgtfpn) ---
+            if (is_swapped) 
+            {
+                /* Trường hợp 1: Trang đã bị Swap Out, giờ Swap In về Frame vừa giải phóng */
+                
+                // Swap từ MEMSWP (old_swpfpn) sang MEMRAM (tgtfpn)
+                regs.a1 = SYSMEM_SWP_OP;
+                regs.a2 = old_swpfpn;
+                regs.a3 = tgtfpn;
+                // PHẢI DÙNG SYSCALL
+                syscall(caller->krnl, caller->pid, 17, &regs); 
+
+                // Trả frame swap cũ về danh sách trống của Swap
+                MEMPHY_put_freefp(caller->krnl->active_mswp, old_swpfpn);
+            }
+            /* Nếu không Swap Out (Trường hợp 2), Frame tgtfpn đã được làm sạch */
+
+            // Cập nhật PTE mới để trỏ đến Frame vật lý mới (tgtfpn) và đánh dấu Present
+            pte_set_fpn(caller, pgn, tgtfpn);
+        }
+        
+        // Thêm/cập nhật trang mới này vào danh sách quản lý (ví dụ: FIFO)
+        enlist_pgn_node(&caller->krnl->mm->fifo_pgn, pgn);
     }
 
-    // BƯỚC 2.2: Lấy PTE của victim page
-    vicpte = pte_get_entry(caller, vicpgn);
-    
-    // BƯỚC 2.3: Lấy frame number của victim (đang ở RAM)
-    vicfpn = PAGING_PTE_FPN(vicpte);
+    /* Sau khi xử lý Page Fault (nếu có), trang đã có trong RAM */
+    *fpn = PAGING_FPN(pte_get_entry(caller, pgn));
 
-    // BƯỚC 2.4: Cấp một frame trống trong SWAP device
-    if (MEMPHY_get_freefp(caller->krnl->active_mswp, &swpfpn) == -1)
-    {
-      return -1;
-    }
-
-    // BƯỚC 2.5: SWAP victim frame từ RAM → SWAP
-    // Lệnh: Copy dữ liệu từ frame RAM đến frame SWAP
-    struct sc_regs regs;
-    regs.a1 = SYSMEM_SWP_OP;   // Lệnh = "swap pages"
-    regs.a2 = vicfpn;          // Source: victim frame ở RAM
-    regs.a3 = swpfpn;          // Destination: frame ở SWAP
-    if (syscall(caller->krnl, caller->pid, 17, &regs) != 0)
-    {
-      return -1;
-    }
-
-    // BƯỚC 2.6: SWAP requested page từ SWAP → RAM (vào frame cũ của victim)
-    // Lệnh: Copy dữ liệu từ frame SWAP vào frame RAM (tái sử dụng frame của victim)
-    addr_t tgtfpn = PAGING_PTE_FPN(pte);  // Target frame number từ SWAP
-    
-    regs.a1 = SYSMEM_SWP_OP;   // Lệnh = "swap pages"
-    regs.a2 = tgtfpn;          // Source: requested page ở SWAP
-    regs.a3 = vicfpn;          // Destination: reuse victim's frame ở RAM
-    if (syscall(caller->krnl, caller->pid, 17, &regs) != 0)
-    {
-      return -1;
-    }
-
-    // BƯỚC 2.7: Cập nhật PTE của victim: đánh dấu nó ở SWAP
-    // Victim page không ở RAM nữa, ở SWAP device
-    pte_set_swap(caller, vicpgn, 0, swpfpn);
-
-    // BƯỚC 2.8: Cập nhật PTE của requested page: đánh dấu nó ở RAM
-    // Requested page bây giờ ở RAM ở frame vicfpn
-    pte_set_fpn(caller, pgn, vicfpn);
-
-    // BƯỚC 2.9: Thêm requested page vào FIFO list (để lần sau biết trang nào cũ nhất)
-    enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
-  }
-
-  // BƯỚC 3: Lấy FPN từ PTE (dù page mới load hay đã ở sẵn)
-  *fpn = PAGING_PTE_FPN(pte_get_entry(caller, pgn));
-
-  return 0;
+    return 0;
 }
-
 
 /*pg_getval - read value at given offset
  *@mm: memory region
@@ -581,7 +762,7 @@ int free_pcb_memph(struct pcb_t *caller)
   int pagenum, fpn;
   uint32_t pte;
 
-  for (pagenum = 0; pagenum < PAGING_MAX_PGN; pagenum++)
+  for (pagenum = 0; pagenum < PAGING64_MAX_PGN; pagenum++)
   {
     pte = pte_get_entry(caller,pagenum);
 
@@ -610,23 +791,27 @@ int free_pcb_memph(struct pcb_t *caller)
 int find_victim_page(struct mm_struct *mm, addr_t *retpgn)
 {
   struct pgn_t *pg = mm->fifo_pgn;
+  if (!pg) return -1;
 
-  /* TODO: Implement the theorical mechanism to find the victim page */
-  if (!pg)
-  {
-    return -1;
-  }
   struct pgn_t *prev = NULL;
-  while (pg->pg_next)
-  {
+  
+  // Tìm node cuối cùng
+  while (pg->pg_next) {
     prev = pg;
     pg = pg->pg_next;
   }
+
   *retpgn = pg->pgn;
-  prev->pg_next = NULL;
 
+  if (prev == NULL) {
+      // Trường hợp list chỉ có 1 phần tử: Update head thành NULL
+      mm->fifo_pgn = NULL;
+  } else {
+      // Trường hợp list > 1 phần tử: Cắt đuôi
+      prev->pg_next = NULL;
+  }
+  
   free(pg);
-
   return 0;
 }
 

@@ -20,6 +20,9 @@
 #include <stdio.h>
 #include <pthread.h>
 #include "mm64.h"
+
+static pthread_mutex_t mm_lock = PTHREAD_MUTEX_INITIALIZER;
+
 /*get_vma_by_num - get vm area by numID
  *@mm: memory region
  *@vmaid: ID vm area to alloc memory region
