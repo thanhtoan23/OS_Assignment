@@ -137,25 +137,19 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
   regs.a1 = SYSMEM_INC_OP;
   regs.a2 = vmaid;
   regs.a3 = inc_amt;  // ← Dùng inc_amt đã align
+
+  syscall(caller->krnl, caller->pid, 17, &regs); /* SYSCALL 17 sys_memmap */
   
-  // syscall(caller->krnl, caller->pid, 17, &regs); /* SYSCALL 17 sys_memmap */
-    syscall(caller->krnl, caller->pid, 17, &regs); //check lại result sau syscall
+  /* Try to get free region again after expanding HEAP */
   if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0){
       caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
       caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
       *alloc_addr = rgnode.rg_start;
   } else {
-      // Still failed after expand!
+      /* Still failed after expanding HEAP - return error */
+      printf("ERROR: Cannot allocate %lu bytes even after expanding HEAP\n", (unsigned long)size);
       pthread_mutex_unlock(&mmvm_lock);
       return -1;
-  }
-  /*Successful increase limit */
-  // After syscall, inc_vma_limit() has already updated sbrk and enlisted free region
-  // Just try to get free region again
-  if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0){
-    caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
-    caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
-    *alloc_addr = rgnode.rg_start;
   }
 
 
@@ -674,15 +668,12 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
   struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
- struct vm_rg_struct *rgit2 = cur_vma->vm_freerg_list;
-  if (rgit == NULL)
+  struct vm_rg_struct **prevnext = &cur_vma->vm_freerg_list; // Track pointer to update
+  
+  if (rgit == NULL) {
     return -1;
+  }
 
-  // while( rgit2 != NULL){
-  //   printf(" rgit start: %d \n",rgit2->rg_start);
-  //   printf(" rgit end: %d \n",rgit2->rg_end);
-  //   rgit2 = rgit2->rg_next;
-  // }
   /* Probe unintialized newrg */
   newrg->rg_start = newrg->rg_end = -1;
 
@@ -697,6 +688,7 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
       /* Update left space in chosen region */
       if (rgit->rg_start + size < rgit->rg_end)
       {
+        /* Partial allocation - update region start */
         rgit->rg_start = rgit->rg_start + size;
       }
       else
@@ -716,20 +708,21 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_s
         }
         else
         {                                /*End of free list */
-          rgit->rg_start = rgit->rg_end; // dummy, size 0 region
-          rgit->rg_next = NULL;
+          /* Remove this node entirely by updating the previous pointer */
+          *prevnext = NULL;
+          free(rgit);
         }
       }
       break;
     }
     else
     {
+      prevnext = &rgit->rg_next; // Move to next node
       rgit = rgit->rg_next; // Traverse next rg
     }
   }
 
   if (newrg->rg_start == -1){
-    printf("Region not found \n");
     return -1;
   } // new region not found
     

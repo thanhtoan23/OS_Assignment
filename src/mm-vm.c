@@ -73,7 +73,7 @@ struct vm_rg_struct *get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, ad
 
   newrg = malloc(sizeof(struct vm_rg_struct));
   newrg->rg_start = cur_vma->sbrk;
-  newrg->rg_end = newrg->rg_start + size;
+  newrg->rg_end = newrg->rg_start + alignedsz;
   /* END TODO */
 
   return newrg;
@@ -170,32 +170,51 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
     return -1;
   }
   
-  // lưu lại giá trị cũ của vm_end
-  int old_end = cur_vma->vm_end;
+  // lưu lại giá trị cũ của sbrk (BEFORE expansion)
+  int old_sbrk = cur_vma->sbrk;
+  printf("DEBUG: old_sbrk = %d, cur_vma->sbrk = %d\n", old_sbrk, cur_vma->sbrk);
   // kiểm tra overlap
   if (validate_overlap_vm_area(caller, vmaid, area->rg_start, area->rg_end) < 0) {
     free(area);
     return -1;
   }
-  // mở rộng HEAP
-  cur_vma->vm_end = area->rg_end;
+  // mở rộng HEAP (chỉ update sbrk, giữ nguyên vm_end = max capacity)
   cur_vma->sbrk  = area->rg_end;
-  printf("vm_end sau khi mo rong: %d \n", cur_vma->vm_end);
+  printf("sbrk sau khi mo rong: %d \n", cur_vma->sbrk);
   // map physical memory cho vùng mới
 
   printf("Map area start: %d \n", area->rg_start);
   printf("Map area end: %d \n", area->rg_end);
   printf("So page cap phat: %d \n", incnumpage);
+  printf("DEBUG: Calling vm_map_ram with mapstart = %d\n", old_sbrk);
   struct memphy_struct *temp = caller->krnl->mram;
   struct framephy_struct *fp = temp->free_fp_list;
-  if (vm_map_ram(caller, area->rg_start, area->rg_end, old_end, incnumpage, area) < 0) {
+  if (vm_map_ram(caller, area->rg_start, area->rg_end, old_sbrk, incnumpage, area) < 0) {
     free(area);
     return -1;
   }
   
+  printf("DEBUG: After vm_map_ram, area->rg_start = %d, area->rg_end = %d\n", area->rg_start, area->rg_end);
+  
   // Enlist vùng mới vào free list để __alloc() có thể dùng
-  struct vm_rg_struct *new_free_rg = init_vm_rg(old_end, cur_vma->sbrk);
+  printf("DEBUG: Creating free region [%d, %d)\n", old_sbrk, cur_vma->sbrk);
+  struct vm_rg_struct *new_free_rg = init_vm_rg(old_sbrk, cur_vma->sbrk);
+  if (new_free_rg == NULL) {
+    printf("ERROR: Failed to allocate new_free_rg\n");
+    free(area);
+    return -1;
+  }
   enlist_vm_rg_node(&cur_vma->vm_freerg_list, new_free_rg);
+  
+  // Debug: verify enlist succeeded
+  printf("Enlisted free region [%ld, %ld) to vm_freerg_list\n", (long)old_sbrk, (long)cur_vma->sbrk);
+  if (cur_vma->vm_freerg_list != NULL) {
+    printf("  vm_freerg_list->rg_start=%ld, rg_end=%ld\n", 
+           (long)cur_vma->vm_freerg_list->rg_start, 
+           (long)cur_vma->vm_freerg_list->rg_end);
+  } else {
+    printf("  ERROR: vm_freerg_list is NULL after enlist!\n");
+  }
   
   free(area);
   return 0;
