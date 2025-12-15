@@ -30,7 +30,7 @@ int queue_empty(void) {
 	unsigned long prio;
 	for (prio = 0; prio < MAX_PRIO; prio++)
 		if(!empty(&mlq_ready_queue[prio])) 
-			return -1;
+			return 0;
 #endif
 	return (empty(&ready_queue) && empty(&run_queue));
 }
