@@ -167,7 +167,7 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
 
 int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
 {
-   // pthread_mutex_lock(&mm_lock);
+   pthread_mutex_lock(&mm_lock);
    struct framephy_struct *fp = mp->free_fp_list; // ← Lấy frame đầu
    if (fp == NULL){
       printf("3\n");
@@ -182,7 +182,7 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
     * No garbage collector acting then it not been released
     */
    free(fp);
-   // pthread_mutex_unlock(&mm_lock);
+   pthread_mutex_unlock(&mm_lock);
    return 0;
 }
 
@@ -206,7 +206,7 @@ int MEMPHY_dump(struct memphy_struct *mp)
 
 int MEMPHY_put_freefp(struct memphy_struct *mp, addr_t fpn)
 {
-   // pthread_mutex_lock(&mm_lock);
+   pthread_mutex_lock(&mm_lock);
    struct framephy_struct *fp = mp->free_fp_list;
    struct framephy_struct *newnode = malloc(sizeof(struct framephy_struct));
 
@@ -214,7 +214,7 @@ int MEMPHY_put_freefp(struct memphy_struct *mp, addr_t fpn)
    newnode->fpn = fpn;
    newnode->fp_next = fp;
    mp->free_fp_list = newnode;
-   // pthread_mutex_unlock(&mm_lock);
+   pthread_mutex_unlock(&mm_lock);
    return 0;
 }
 

@@ -394,11 +394,12 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
   vma0->sbrk = vma0->vm_start;
   struct vm_rg_struct *first_rg = init_vm_rg(vma0->vm_start, vma0->vm_end);
   enlist_vm_rg_node(&vma0->vm_freerg_list, first_rg);
-
+  vma0->vm_freerg_list = NULL;
   vma0->vm_next = NULL;
   vma0->vm_mm = mm;
 
   mm->mmap = vma0;
+  mm->fifo_pgn = NULL;
   
   return 0;
 }
