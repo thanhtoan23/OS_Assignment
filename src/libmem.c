@@ -74,7 +74,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
   /*Allocate at the toproof */
   pthread_mutex_lock(&mmvm_lock);
   struct vm_rg_struct rgnode;
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   int inc_sz=0;
   
 
@@ -126,20 +126,15 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
 #endif  
   
   syscall(caller->krnl, caller->pid, 17, &regs); /* SYSCALL 17 sys_memmap */
-  int new_sbrk = cur_vma->sbrk;
-  struct vm_rg_struct *new_rg_free = init_vm_rg(old_sbrk, new_sbrk);
-  enlist_vm_rg_node(&cur_vma->vm_freerg_list, new_rg_free);
+  
   /*Successful increase limit */
-  // printf("old sbrk: %d \n",old_sbrk);
-  // printf("New sbrk: %d \n",new_sbrk);
+  // After syscall, inc_vma_limit() has already updated sbrk and enlisted free region
+  // Just try to get free region again
   if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0){
-    caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
-    caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
-    *alloc_addr = old_sbrk;
+    caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
+    caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
+    *alloc_addr = rgnode.rg_start;
   }
-  // printf("Da cap phat cho caller \n");
-  // printf("caller start: %d \n", caller->mm->symrgtbl[rgid].rg_start );
-  // printf("caller end: %d \n", caller->mm->symrgtbl[rgid].rg_end );
 
 
 
@@ -328,27 +323,15 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     }
 
     // BƯỚC 2.5: SWAP victim frame từ RAM → SWAP
-    // Lệnh: Copy dữ liệu từ frame RAM đến frame SWAP
-    struct sc_regs regs;
-    regs.a1 = SYSMEM_SWP_OP;   // Lệnh = "swap pages"
-    regs.a2 = vicfpn;          // Source: victim frame ở RAM
-    regs.a3 = swpfpn;          // Destination: frame ở SWAP
-    if (syscall(caller->krnl, caller->pid, 17, &regs) != 0)
-    {
-      return -1;
-    }
+    // Copy dữ liệu từ frame RAM đến frame SWAP
+    __swap_cp_page(caller->krnl->mram, vicfpn, caller->krnl->active_mswp, swpfpn);
 
     // BƯỚC 2.6: SWAP requested page từ SWAP → RAM (vào frame cũ của victim)
-    // Lệnh: Copy dữ liệu từ frame SWAP vào frame RAM (tái sử dụng frame của victim)
-    addr_t tgtfpn = PAGING_PTE_FPN(pte);  // Target frame number từ SWAP
+    // Lấy swap offset từ PTE cũ của requested page
+    addr_t old_swpfpn = PAGING_SWP(pte);  // Requested page đang ở đâu trong SWAP
     
-    regs.a1 = SYSMEM_SWP_OP;   // Lệnh = "swap pages"
-    regs.a2 = tgtfpn;          // Source: requested page ở SWAP
-    regs.a3 = vicfpn;          // Destination: reuse victim's frame ở RAM
-    if (syscall(caller->krnl, caller->pid, 17, &regs) != 0)
-    {
-      return -1;
-    }
+    // Copy dữ liệu từ SWAP vào frame RAM (reuse victim's frame)
+    __swap_cp_page(caller->krnl->active_mswp, old_swpfpn, caller->krnl->mram, vicfpn);
 
     // BƯỚC 2.7: Cập nhật PTE của victim: đánh dấu nó ở SWAP
     // Victim page không ở RAM nữa, ở SWAP device
@@ -397,9 +380,9 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 {
   // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
-  int pgn = PAGING_PGN(addr);        // Page number (phần cao của VA)
-  int off = PAGING_OFFST(addr);      // Offset (phần thấp của VA)
-  int fpn;                            // Frame number sẽ lấy từ pg_getpage
+  int pgn = PAGING64_PGN(addr);        // Page number (phần cao của VA)
+  int off = addr & ((1 << 12) - 1);    // Offset (12 bits thấp)
+  int fpn;                              // Frame number sẽ lấy từ pg_getpage
 
   // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
   if (pg_getpage(mm, pgn, &fpn, caller) != 0)
@@ -454,9 +437,9 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
 {
   // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
-  int pgn = PAGING_PGN(addr);        // Page number (phần cao của VA)
-  int off = PAGING_OFFST(addr);      // Offset (phần thấp của VA)
-  int fpn;                            // Frame number sẽ lấy từ pg_getpage
+  int pgn = PAGING64_PGN(addr);        // Page number (phần cao của VA)
+  int off = addr & ((1 << 12) - 1);    // Offset (12 bits thấp)
+  int fpn;                              // Frame number sẽ lấy từ pg_getpage
 
   // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
   if (pg_getpage(mm, pgn, &fpn, caller) != 0)
@@ -646,7 +629,12 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn)
     pg = pg->pg_next;
   }
   *retpgn = pg->pgn;
-  prev->pg_next = NULL;
+  
+  if (prev != NULL) {
+    prev->pg_next = NULL;
+  } else {
+    mm->fifo_pgn = NULL; // List chỉ có 1 phần tử, giờ rỗng
+  }
 
   free(pg);
 
@@ -661,7 +649,7 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn)
  */
 int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_struct *newrg)
 {
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
   struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
  struct vm_rg_struct *rgit2 = cur_vma->vm_freerg_list;

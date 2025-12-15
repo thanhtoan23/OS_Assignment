@@ -69,7 +69,7 @@ struct vm_rg_struct *get_vm_area_node_at_brk(struct pcb_t *caller, int vmaid, ad
   // newrg->rg_start = ...
   // newrg->rg_end = ...
   */
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
   newrg = malloc(sizeof(struct vm_rg_struct));
   newrg->rg_start = cur_vma->sbrk;
@@ -96,7 +96,7 @@ int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, addr_t vmastart, a
     return -1;
   }
 
-  struct vm_area_struct *vma = caller->krnl->mm->mmap;
+  struct vm_area_struct *vma = caller->mm->mmap;
   if (vma == NULL)
   {
     return -1;
@@ -104,7 +104,7 @@ int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, addr_t vmastart, a
 
   /* TODO validate the planned memory area is not overlapped */
 
-  struct vm_area_struct *cur_area = get_vma_by_num(caller->krnl->mm, vmaid);
+  struct vm_area_struct *cur_area = get_vma_by_num(caller->mm, vmaid);
   if (cur_area == NULL)
   {
     return -1;
@@ -164,7 +164,7 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
   }
   
   // lấy vma hiện tại
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   if (cur_vma == NULL) {
     free(area);
     return -1;
@@ -181,7 +181,7 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
   cur_vma->vm_end = area->rg_end;
   cur_vma->sbrk  = area->rg_end;
   printf("vm_end sau khi mo rong: %d \n", cur_vma->vm_end);
-  // map physical memory cho vungf mới
+  // map physical memory cho vùng mới
 
   printf("Map area start: %d \n", area->rg_start);
   printf("Map area end: %d \n", area->rg_end);
@@ -193,6 +193,11 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
     return -1;
   }
   
+  // Enlist vùng mới vào free list để __alloc() có thể dùng
+  struct vm_rg_struct *new_free_rg = init_vm_rg(old_end, cur_vma->sbrk);
+  enlist_vm_rg_node(&cur_vma->vm_freerg_list, new_free_rg);
+  
+  free(area);
   return 0;
 }
 
