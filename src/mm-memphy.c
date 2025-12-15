@@ -146,6 +146,7 @@ int MEMPHY_format(struct memphy_struct *mp, int pagesz)
    /* Init head of free framephy list */
    fst = malloc(sizeof(struct framephy_struct)); 
    fst->fpn = iter;
+   fst->fp_next = NULL;
    mp->free_fp_list = fst;
 
    /* We have list with first element, fill in the rest num-1 element member*/
@@ -171,6 +172,7 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
    struct framephy_struct *fp = mp->free_fp_list; // ← Lấy frame đầu
    if (fp == NULL){
       printf("3\n");
+      pthread_mutex_unlock(&mm_lock);
       return -1;
    }
       

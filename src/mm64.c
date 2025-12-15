@@ -111,18 +111,18 @@ static addr_t *__get_pte_ptr(struct mm_struct *mm, addr_t pgn, int alloc) {
     // 1. Calculate indices
     get_pd_from_pagenum(pgn, &pgd_idx, &p4d_idx, &pud_idx, &pmd_idx, &pt_idx);
     
-    // 2. Traverse PGD (Level 5)
-    if (mm->pgd == NULL) return NULL;
+    // 2. Traverse PGD (Level 5) - cấp phát nếu cần
+    if (mm->pgd == NULL) {
+        if (!alloc) return NULL;
+        mm->pgd = alloc_table_level();
+    }
     
     addr_t *p4d_table = (addr_t *)mm->pgd[pgd_idx];
     
     if (p4d_table == NULL) {
-        
         if (!alloc) return NULL;
-        
         p4d_table = alloc_table_level();
         mm->pgd[pgd_idx] = (addr_t)p4d_table;
-        //////////////////////////////////////////////////////////////////////////////////////
     }
 
     // 3. Traverse P4D (Level 4)
@@ -288,7 +288,7 @@ addr_t vmap_page_range(struct pcb_t *caller,
 
 addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct **frm_lst)
 {
-  int ret_fpn;
+  addr_t ret_fpn;
   struct framephy_struct *newfp_str;
   struct framephy_struct *last_fp = NULL;
   
@@ -353,12 +353,12 @@ addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapst
 int __swap_cp_page(struct memphy_struct *mpsrc, addr_t srcfpn,
                    struct memphy_struct *mpdst, addr_t dstfpn)
 {
-  int cellidx;
+  addr_t cellidx;
   addr_t addrsrc, addrdst;
-  for (cellidx = 0; cellidx < PAGING_PAGESZ; cellidx++)
+  for (cellidx = 0; cellidx < PAGING64_PAGESZ; cellidx++)
   {
-    addrsrc = srcfpn * PAGING_PAGESZ + cellidx;
-    addrdst = dstfpn * PAGING_PAGESZ + cellidx;
+    addrsrc = srcfpn * PAGING64_PAGESZ + cellidx;
+    addrdst = dstfpn * PAGING64_PAGESZ + cellidx;
 
     BYTE data;
     MEMPHY_read(mpsrc, addrsrc, &data);
@@ -376,13 +376,9 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
 {
   struct vm_area_struct *vma0 = malloc(sizeof(struct vm_area_struct));
 
-  /* Init PGD (Level 5) - Root of the page table */
-  pthread_mutex_lock(&mm_lock);
-  mm->pgd = alloc_table_level();
-  pthread_mutex_unlock(&mm_lock);
-
-  /* P4D, PUD, PMD, PT will be allocated dynamically on demand */
-  mm->p4d = NULL; // Not used as root
+  /* PGD, P4D, PUD, PMD, PT will be allocated dynamically on demand */
+  mm->pgd = NULL;
+  mm->p4d = NULL;
   mm->pud = NULL;
   mm->pmd = NULL;
   mm->pt  = NULL;

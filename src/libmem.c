@@ -370,8 +370,8 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 {
   // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
-  int pgn = PAGING_PGN(addr);        // Page number (phần cao của VA)
-  int off = PAGING_OFFST(addr);      // Offset (phần thấp của VA)
+  addr_t pgn = PAGING_PGN(addr);        // Page number (phần cao của VA)
+  addr_t off = PAGING_OFFST(addr);      // Offset (phần thấp của VA)
   int fpn;                            // Frame number sẽ lấy từ pg_getpage
 
   // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
@@ -380,7 +380,7 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 
   // BƯỚC 3: Tính địa chỉ vật lý (Physical Address)
   // PA = (FPN * PAGE_SIZE) + offset
-  int phyaddr = (fpn * PAGING_PAGESZ) + off;
+  addr_t phyaddr = (fpn * PAGING64_PAGESZ) + off;
 
   // BƯỚC 4: Đọc byte từ RAM bằng syscall
   struct sc_regs regs;
@@ -406,8 +406,8 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
 {
   // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
-  int pgn = PAGING_PGN(addr);        // Page number (phần cao của VA)
-  int off = PAGING_OFFST(addr);      // Offset (phần thấp của VA)
+  addr_t pgn = PAGING_PGN(addr);        // Page number (phần cao của VA)
+  addr_t off = PAGING_OFFST(addr);      // Offset (phần thấp của VA)
   int fpn;                            // Frame number sẽ lấy từ pg_getpage
 
   // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
@@ -416,7 +416,7 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
 
   // BƯỚC 3: Tính địa chỉ vật lý (Physical Address)
   // PA = (FPN * PAGE_SIZE) + offset
-  int phyaddr = (fpn * PAGING_PAGESZ) + off;
+  addr_t phyaddr = (fpn * PAGING64_PAGESZ) + off;
 
   // BƯỚC 4: Ghi byte vào RAM bằng syscall
   struct sc_regs regs;
@@ -610,7 +610,7 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn)
  */
 int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_struct *newrg)
 {
-  struct vm_area_struct *cur_vma = get_vma_by_num(caller->krnl->mm, vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 
   struct vm_rg_struct *rgit = cur_vma->vm_freerg_list;
   if (rgit == NULL)
