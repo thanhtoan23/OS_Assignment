@@ -11,7 +11,7 @@
 #include "queue.h"
 #include "sched.h"
 #include <pthread.h>
-
+#include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
 
