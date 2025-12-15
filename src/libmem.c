@@ -100,33 +100,55 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
 
   /*Attempt to increate limit to get space */
   
-#ifdef MM64
-  inc_sz = (uint32_t)(size/(int)PAGING64_PAGESZ);
-  inc_sz = inc_sz + 1;
+// #ifdef MM64
+//   inc_sz = (uint32_t)(size/(int)PAGING64_PAGESZ);
+//   inc_sz = inc_sz + 1;
   
-#else
-  inc_sz = PAGING_PAGE_ALIGNSZ(size);
+// #else
+//   inc_sz = PAGING_PAGE_ALIGNSZ(size);
   
-#endif  
-  int old_sbrk;
-  inc_sz = inc_sz + 1;
-  old_sbrk = cur_vma->sbrk;
-  /* TODO INCREASE THE LIMIT
-   * SYSCALL 1 sys_memmap
-   */
+// #endif  
+//   int old_sbrk;
+//   inc_sz = inc_sz + 1;
+//   old_sbrk = cur_vma->sbrk;
+//   /* TODO INCREASE THE LIMIT
+//    * SYSCALL 1 sys_memmap
+//    */
+//   struct sc_regs regs;
+//   regs.a1 = SYSMEM_INC_OP;
+//   regs.a2 = vmaid;
+
+// #ifdef MM64
+//   //regs.a3 = size;
+//   regs.a3 = PAGING64_PAGE_ALIGNSZ(size);
+// #else
+//   regs.a3 = PAGING_PAGE_ALIGNSZ(size);
+// #endif  
+
+  addr_t inc_amt;
+  #ifdef MM64
+    inc_amt = PAGING64_PAGE_ALIGNSZ(size);  // ← Align đúng
+  #else
+    inc_amt = PAGING_PAGE_ALIGNSZ(size);
+  #endif
+  
+  // Gọi syscall với inc_amt đã align
   struct sc_regs regs;
   regs.a1 = SYSMEM_INC_OP;
   regs.a2 = vmaid;
-
-#ifdef MM64
-  //regs.a3 = size;
-  regs.a3 = PAGING64_PAGE_ALIGNSZ(size);
-#else
-  regs.a3 = PAGING_PAGE_ALIGNSZ(size);
-#endif  
+  regs.a3 = inc_amt;  // ← Dùng inc_amt đã align
   
-  syscall(caller->krnl, caller->pid, 17, &regs); /* SYSCALL 17 sys_memmap */
-  
+  // syscall(caller->krnl, caller->pid, 17, &regs); /* SYSCALL 17 sys_memmap */
+    syscall(caller->krnl, caller->pid, 17, &regs); //check lại result sau syscall
+  if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0){
+      caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
+      caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
+      *alloc_addr = rgnode.rg_start;
+  } else {
+      // Still failed after expand!
+      pthread_mutex_unlock(&mmvm_lock);
+      return -1;
+  }
   /*Successful increase limit */
   // After syscall, inc_vma_limit() has already updated sbrk and enlisted free region
   // Just try to get free region again
