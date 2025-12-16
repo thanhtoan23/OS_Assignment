@@ -18,6 +18,7 @@
 #include <stdio.h>
 #include <time.h>
 #include <pthread.h> 
+#include <string.h>
 
 /* Synchronization: Mutex for protecting Physical Memory access and Page Table expansion */
 static pthread_mutex_t mm_lock = PTHREAD_MUTEX_INITIALIZER;
@@ -110,18 +111,18 @@ static addr_t *__get_pte_ptr(struct mm_struct *mm, addr_t pgn, int alloc) {
     // 1. Calculate indices
     get_pd_from_pagenum(pgn, &pgd_idx, &p4d_idx, &pud_idx, &pmd_idx, &pt_idx);
     
-    // 2. Traverse PGD (Level 5)
-    if (mm->pgd == NULL) return NULL;
+    // 2. Traverse PGD (Level 5) - cấp phát nếu cần
+    if (mm->pgd == NULL) {
+        if (!alloc) return NULL;
+        mm->pgd = alloc_table_level();
+    }
     
     addr_t *p4d_table = (addr_t *)mm->pgd[pgd_idx];
     
     if (p4d_table == NULL) {
-        
         if (!alloc) return NULL;
-        
         p4d_table = alloc_table_level();
         mm->pgd[pgd_idx] = (addr_t)p4d_table;
-        //////////////////////////////////////////////////////////////////////////////////////
     }
 
     // 3. Traverse P4D (Level 4)
@@ -168,7 +169,7 @@ int pte_set_swap(struct pcb_t *caller, addr_t pgn, int swptyp, addr_t swpoff)
       return -1;
   }
 
-  SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
+  CLRBIT(*pte, PAGING_PTE_PRESENT_MASK);
   SETBIT(*pte, PAGING_PTE_SWAPPED_MASK);
   CLRBIT(*pte, PAGING_PTE_DIRTY_MASK); // Usually cleared on swap out
 
@@ -277,9 +278,7 @@ addr_t vmap_page_range(struct pcb_t *caller,
       pte_set_fpn(caller, pgn + pgit, fpit->fpn);
       
       // Tracking for FIFO replacement (enlisting)
-      pthread_mutex_lock(&mm_lock);
-      enlist_pgn_node(&caller->krnl->mm->fifo_pgn, pgn + pgit);
-      pthread_mutex_unlock(&mm_lock);
+      enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
 
       fpit = fpit->fp_next;
   }
@@ -289,21 +288,17 @@ addr_t vmap_page_range(struct pcb_t *caller,
 
 addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct **frm_lst)
 {
-  int ret_fpn;
+  addr_t ret_fpn;
   struct framephy_struct *newfp_str;
   struct framephy_struct *last_fp = NULL;
   
   *frm_lst = NULL;
-  struct memphy_struct *temp = caller->krnl->mram;
-  struct framephy_struct *fp = temp->free_fp_list;
 
   for (addr_t pgit = 0; pgit < req_pgnum; pgit++){
     newfp_str = malloc(sizeof(struct framephy_struct));
 
     // Lock access to global Physical Memory Manager (MEMPHY)
-    pthread_mutex_lock(&mm_lock);
     int res = MEMPHY_get_freefp(caller->krnl->mram, (addr_t *)&ret_fpn);
-    pthread_mutex_unlock(&mm_lock);
 
     if (res == 0)
     {
@@ -358,7 +353,7 @@ addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapst
 int __swap_cp_page(struct memphy_struct *mpsrc, addr_t srcfpn,
                    struct memphy_struct *mpdst, addr_t dstfpn)
 {
-  int cellidx;
+  addr_t cellidx;
   addr_t addrsrc, addrdst;
   for (cellidx = 0; cellidx < PAGING_PAGESZ; cellidx++)
   {
@@ -381,13 +376,9 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
 {
   struct vm_area_struct *vma0 = malloc(sizeof(struct vm_area_struct));
 
-  /* Init PGD (Level 5) - Root of the page table */
-  pthread_mutex_lock(&mm_lock);
-  mm->pgd = alloc_table_level();
-  pthread_mutex_unlock(&mm_lock);
-
-  /* P4D, PUD, PMD, PT will be allocated dynamically on demand */
-  mm->p4d = NULL; // Not used as root
+  /* PGD, P4D, PUD, PMD, PT will be allocated dynamically on demand */
+  mm->pgd = NULL;
+  mm->p4d = NULL;
   mm->pud = NULL;
   mm->pmd = NULL;
   mm->pt  = NULL;
@@ -399,11 +390,12 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
   vma0->sbrk = vma0->vm_start;
   struct vm_rg_struct *first_rg = init_vm_rg(vma0->vm_start, vma0->vm_end);
   enlist_vm_rg_node(&vma0->vm_freerg_list, first_rg);
-
+  vma0->vm_freerg_list = NULL;
   vma0->vm_next = NULL;
   vma0->vm_mm = mm;
 
   mm->mmap = vma0;
+  mm->fifo_pgn = NULL;
   
   return 0;
 }
@@ -447,7 +439,7 @@ int print_list_fp(struct framephy_struct *ifp)
   printf("\n");
   while (fp != NULL)
   {
-    printf("fp[%d]\n", fp->fpn);
+    printf("fp[%ld]\n", fp->fpn);
     fp = fp->fp_next;
   }
   printf("\n");
@@ -493,7 +485,7 @@ int print_list_pgn(struct pgn_t *ip)
   printf("\n");
   while (ip != NULL)
   {
-    printf("va[%d]-\n", ip->pgn);
+    printf("va[%ld]-\n", ip->pgn);
     ip = ip->pg_next;
   }
   printf("n");
@@ -527,7 +519,21 @@ int print_pgtbl(struct pcb_t *caller, addr_t start, addr_t end)
       return -1;
   }
 
+  // We will use address start (0 for default) to find index
+  addr_t pgn_start = start >> PAGING64_ADDR_PT_SHIFT;
+  addr_t pgd_idx, p4d_idx, pud_idx, pmd_idx, pt_idx;
+  get_pd_from_pagenum(pgn_start, &pgd_idx, &p4d_idx, &pud_idx, &pmd_idx, &pt_idx);
 
+  /* Start traversing from PGD */
+  addr_t *p4d_table = (addr_t*)caller->mm->pgd[pgd_idx];
+  addr_t *pud_table = (addr_t*)p4d_table[p4d_idx];
+  addr_t *pmd_table = (addr_t*)pud_table[pud_idx];
+  //printf result
+  printf("print_pgtbl:\n PDG=%016lx P4G=%016lx PUD=%016lx PMD=%016lx\n", 
+       (unsigned long)caller->mm->pgd, 
+       (unsigned long)p4d_table, 
+       (unsigned long)pud_table, 
+       (unsigned long)pmd_table);
   
   // Start recursion from PGD (Level 5)
   print_pgtbl_recursive(caller->mm->pgd, 5, 0);

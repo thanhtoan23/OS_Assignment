@@ -88,6 +88,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
   {
     caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
     caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
+    caller->mm->symrgtbl[rgid].rg_next = NULL;
  
     *alloc_addr = rgnode.rg_start;
 
@@ -142,14 +143,10 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
   
   /* Try to get free region again after expanding HEAP */
   if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0){
-      caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
-      caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
-      *alloc_addr = rgnode.rg_start;
-  } else {
-      /* Still failed after expanding HEAP - return error */
-      printf("ERROR: Cannot allocate %lu bytes even after expanding HEAP\n", (unsigned long)size);
-      pthread_mutex_unlock(&mmvm_lock);
-      return -1;
+    caller->mm->symrgtbl[rgid].rg_start = rgnode.rg_start;
+    caller->mm->symrgtbl[rgid].rg_end = rgnode.rg_end;
+    caller->mm->symrgtbl[rgid].rg_next = NULL;
+    *alloc_addr = rgnode.rg_start;
   }
 
 
@@ -215,6 +212,7 @@ int liballoc(struct pcb_t *proc, addr_t size, uint32_t reg_index)
     return -1;
   }
   proc->regs[reg_index] = addr;
+printf("%s:%d\n",__func__,__LINE__);
 #ifdef IODUMP
   /* TODO dump IO content (if needed) */
 #ifdef PAGETBL_DUMP
@@ -230,7 +228,7 @@ int liballoc(struct pcb_t *proc, addr_t size, uint32_t reg_index)
  *@proc: Process executing the instruction
  *@size: allocated size
  *@reg_index: memory region ID (used to identify variable in symbole table)
- */
+*/
 
 int libfree(struct pcb_t *proc, uint32_t reg_index)
 {
@@ -254,117 +252,119 @@ printf("%s:%d\n",__func__,__LINE__);
  *@pagenum: PGN
  *@framenum: return FPN
  *@caller: caller
- *
  */
-// int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
-// {
-
-//   uint32_t pte = pte_get_entry(caller, pgn);
-
-//   if (!PAGING_PAGE_PRESENT(pte))
-//   { /* Page is not online, make it actively living */
-//     addr_t vicpgn, swpfpn;
-// //    addr_t vicfpn;
-// //    addr_t vicpte;
-// //  struct sc_regs regs;
-
-//     /* TODO Initialize the target frame storing our variable */
-// //  addr_t tgtfpn 
-
-//     /* TODO: Play with your paging theory here */
-//     /* Find victim page */
-//     if (find_victim_page(caller->krnl->mm, &vicpgn) == -1)
-//     {
-//       return -1;
-//     }
-
-//     /* Get free frame in MEMSWP */
-//     if (MEMPHY_get_freefp(caller->krnl->active_mswp, &swpfpn) == -1)
-//     {
-//       return -1;
-//     }
-
-//     /* TODO: Implement swap frame from MEMRAM to MEMSWP and vice versa*/
-
-//     /* TODO copy victim frame to swap 
-//      * SWP(vicfpn <--> swpfpn)
-//      * SYSCALL 1 sys_memmap
-//      */
-
-
-//     /* Update page table */
-//     //pte_set_swap(...);
-
-//     /* Update its online status of the target page */
-//     //pte_set_fpn(...);
-
-//     enlist_pgn_node(&caller->krnl->mm->fifo_pgn, pgn);
-//   }
-
-//   *fpn = PAGING_FPN(pte_get_entry(caller,pgn));
-
-//   return 0;
-// }
 int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 {
-  // BƯỚC 1: Lấy PTE (Page Table Entry) của trang
-  uint32_t pte = pte_get_entry(caller, pgn);
+    uint32_t old_pte = pte_get_entry(caller, pgn);
 
-  // BƯỚC 2: Check xem trang này có ở RAM không?
-  if (!PAGING_PAGE_PRESENT(pte))
-  { 
-    /* PAGE FAULT! Trang không ở RAM → phải SWAP */
-    
-    addr_t vicpgn;           // Victim page number (trang cũ nhất)
-    addr_t vicfpn;           // Victim frame number (frame của trang cũ)
-    addr_t swpfpn;           // Frame trong SWAP device
-    uint32_t vicpte;         // PTE của victim page
-    
-    // BƯỚC 2.1: Tìm victim page (trang cũ nhất theo FIFO)
-    if (find_victim_page(caller->mm, &vicpgn) == -1)
-    {
-      return -1;
+    if (!PAGING_PAGE_PRESENT(old_pte))
+    { 
+        /* Xảy ra Page Fault: Trang không có trong RAM */
+        addr_t tgtfpn; // Target Frame Page Number
+        struct sc_regs regs; // Dùng cho System Call
+
+        // Kiểm tra xem trang này có đang nằm trong SWAP không (Khả năng 1)
+        int is_swapped = (old_pte & PAGING_PTE_SWAPPED_MASK);
+        addr_t old_swpfpn = 0;
+        if (is_swapped) {
+            old_swpfpn = PAGING_SWP(old_pte); // Lấy địa chỉ swap cũ
+        }
+        
+        // --- 1. CỐ GẮNG LẤY FRAME TRỐNG TRONG RAM ---
+        if (MEMPHY_get_freefp(caller->krnl->mram, &tgtfpn) == 0) 
+        { 
+          printf("1\n");
+            // RAM còn chỗ! Dùng frame này ngay.
+            if (is_swapped) 
+            {
+                /* Trường hợp 1: Trang đã bị Swap Out, giờ Swap In về Frame trống */
+                
+                // Swap từ MEMSWP (old_swpfpn) sang MEMRAM (tgtfpn)
+                regs.a1 = SYSMEM_SWP_OP;
+                regs.a2 = old_swpfpn;
+                regs.a3 = tgtfpn;
+                // PHẢI DÙNG SYSCALL vì di chuyển dữ liệu vật lý từ thiết bị Swap vào RAM
+                syscall(caller->krnl, caller->pid, 17, &regs); 
+                
+                // Trả frame swap cũ về danh sách trống của Swap
+                MEMPHY_put_freefp(caller->krnl->active_mswp, old_swpfpn);
+
+            } 
+            else 
+            {
+              printf("2\n");
+                /* Trường hợp 2: Trang chưa từng được cấp phát/không nằm trong Swap (Lần đầu) */
+                // Không cần di chuyển dữ liệu, Frame trống là đủ.
+            }
+            
+            // Cập nhật PTE mới để trỏ đến Frame vật lý mới (tgtfpn) và đánh dấu Present
+            pte_set_fpn(caller, pgn, tgtfpn); 
+
+        } 
+        else 
+        {
+            // --- 2. RAM ĐÃ ĐẦY! PHẢI TÌM VICTIM ĐỂ SWAP OUT ---
+            addr_t vicpgn, vicfpn, swpfpn;
+            uint32_t vicpte;
+
+            /* Tìm victim page */
+            if (find_victim_page(caller->krnl->mm, &vicpgn) == -1) {
+                printf("ERROR: Cannot find victim page\n");
+                return -1;
+            }
+
+            /* Lấy PTE và FPN của victim */
+            vicpte = pte_get_entry(caller, vicpgn);
+            vicfpn = PAGING_FPN(vicpte);
+
+            /* Lấy free frame trong MEMSWP cho victim */
+            if (MEMPHY_get_freefp(caller->krnl->active_mswp, &swpfpn) == -1) {
+                printf("ERROR: Cannot get free frame in SWAP\n");
+                return -1;
+            }
+
+            /* Swap Out: Copy victim frame (vicfpn) đến swap (swpfpn) */
+            regs.a1 = SYSMEM_SWP_OP;
+            regs.a2 = vicfpn;
+            regs.a3 = swpfpn;
+            // PHẢI DÙNG SYSCALL vì di chuyển dữ liệu vật lý từ RAM ra thiết bị Swap
+            syscall(caller->krnl, caller->pid, 17, &regs);
+
+            /* Cập nhật PTE của victim để trỏ đến Swap */
+            pte_set_swap(caller, vicpgn, 0, swpfpn);
+
+            /* Frame của victim (vicfpn) giờ là Frame mục tiêu (tgtfpn) */
+            tgtfpn = vicfpn;
+
+            // --- XỬ LÝ TRANG HIỆN TẠI VÀO FRAME MỚI (tgtfpn) ---
+            if (is_swapped) 
+            {
+                /* Trường hợp 1: Trang đã bị Swap Out, giờ Swap In về Frame vừa giải phóng */
+                
+                // Swap từ MEMSWP (old_swpfpn) sang MEMRAM (tgtfpn)
+                regs.a1 = SYSMEM_SWP_OP;
+                regs.a2 = old_swpfpn;
+                regs.a3 = tgtfpn;
+                // PHẢI DÙNG SYSCALL
+                syscall(caller->krnl, caller->pid, 17, &regs); 
+
+                // Trả frame swap cũ về danh sách trống của Swap
+                MEMPHY_put_freefp(caller->krnl->active_mswp, old_swpfpn);
+            }
+            /* Nếu không Swap Out (Trường hợp 2), Frame tgtfpn đã được làm sạch */
+
+            // Cập nhật PTE mới để trỏ đến Frame vật lý mới (tgtfpn) và đánh dấu Present
+            pte_set_fpn(caller, pgn, tgtfpn);
+        }
+        
+        // Thêm/cập nhật trang mới này vào danh sách quản lý (ví dụ: FIFO)
+        enlist_pgn_node(&caller->krnl->mm->fifo_pgn, pgn);
     }
 
-    // BƯỚC 2.2: Lấy PTE của victim page
-    vicpte = pte_get_entry(caller, vicpgn);
-    
-    // BƯỚC 2.3: Lấy frame number của victim (đang ở RAM)
-    vicfpn = PAGING_PTE_FPN(vicpte);
+    /* Sau khi xử lý Page Fault (nếu có), trang đã có trong RAM */
+    *fpn = PAGING_FPN(pte_get_entry(caller, pgn));
 
-    // BƯỚC 2.4: Cấp một frame trống trong SWAP device
-    if (MEMPHY_get_freefp(caller->krnl->active_mswp, &swpfpn) == -1)
-    {
-      return -1;
-    }
-
-    // BƯỚC 2.5: SWAP victim frame từ RAM → SWAP
-    // Copy dữ liệu từ frame RAM đến frame SWAP
-    __swap_cp_page(caller->krnl->mram, vicfpn, caller->krnl->active_mswp, swpfpn);
-
-    // BƯỚC 2.6: SWAP requested page từ SWAP → RAM (vào frame cũ của victim)
-    // Lấy swap offset từ PTE cũ của requested page
-    addr_t old_swpfpn = PAGING_SWP(pte);  // Requested page đang ở đâu trong SWAP
-    
-    // Copy dữ liệu từ SWAP vào frame RAM (reuse victim's frame)
-    __swap_cp_page(caller->krnl->active_mswp, old_swpfpn, caller->krnl->mram, vicfpn);
-
-    // BƯỚC 2.7: Cập nhật PTE của victim: đánh dấu nó ở SWAP
-    // Victim page không ở RAM nữa, ở SWAP device
-    pte_set_swap(caller, vicpgn, 0, swpfpn);
-
-    // BƯỚC 2.8: Cập nhật PTE của requested page: đánh dấu nó ở RAM
-    // Requested page bây giờ ở RAM ở frame vicfpn
-    pte_set_fpn(caller, pgn, vicfpn);
-
-    // BƯỚC 2.9: Thêm requested page vào FIFO list (để lần sau biết trang nào cũ nhất)
-    enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
-  }
-
-  // BƯỚC 3: Lấy FPN từ PTE (dù page mới load hay đã ở sẵn)
-  *fpn = PAGING_PTE_FPN(pte_get_entry(caller, pgn));
-
-  return 0;
+    return 0;
 }
 
 
@@ -374,31 +374,12 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
  *@value: value
  *
  */
-// int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
-// {
-//   int pgn = PAGING_PGN(addr);
-// //  int off = PAGING_OFFST(addr);
-//   int fpn;
-
-//   if (pg_getpage(mm, pgn, &fpn, caller) != 0)
-//     return -1; /* invalid page access */
-
-// //  int phyaddr = (fpn << PAGING_ADDR_FPN_LOBIT) + off;
-
-//   /* TODO 
-//    *  MEMPHY_read(caller->krnl->mram, phyaddr, data);
-//    *  MEMPHY READ 
-//    *  SYSCALL 17 sys_memmap with SYSMEM_IO_READ
-//    */
-
-//   return 0;
-// }
 int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 {
   // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
-  int pgn = PAGING64_PGN(addr);        // Page number (phần cao của VA)
-  int off = addr & ((1 << 12) - 1);    // Offset (12 bits thấp)
-  int fpn;                              // Frame number sẽ lấy từ pg_getpage
+  addr_t pgn = PAGING_PGN(addr);        // Page number (phần cao của VA)
+  addr_t off = PAGING_OFFST(addr);      // Offset (phần thấp của VA)
+  int fpn;                            // Frame number sẽ lấy từ pg_getpage
 
   // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
   if (pg_getpage(mm, pgn, &fpn, caller) != 0)
@@ -406,7 +387,7 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 
   // BƯỚC 3: Tính địa chỉ vật lý (Physical Address)
   // PA = (FPN * PAGE_SIZE) + offset
-  int phyaddr = (fpn * PAGING64_PAGESZ) + off;
+  addr_t phyaddr = (fpn * PAGING64_PAGESZ) + off;
 
   // BƯỚC 4: Đọc byte từ RAM bằng syscall
   struct sc_regs regs;
@@ -423,39 +404,18 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
   return 0;
 }
 
-
-
 /*pg_setval - write value to given offset
  *@mm: memory region
  *@addr: virtual address to acess
  *@value: value
  *
  */
-// int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
-// {
-//   int pgn = PAGING_PGN(addr);
-// //  int off = PAGING_OFFST(addr);
-//   int fpn;
-
-//   /* Get the page to MEMRAM, swap from MEMSWAP if needed */
-//   if (pg_getpage(mm, pgn, &fpn, caller) != 0)
-//     return -1; /* invalid page access */
-
-
-//   /* TODO 
-//    *  MEMPHY_write(caller->krnl->mram, phyaddr, value);
-//    *  MEMPHY WRITE with SYSMEM_IO_WRITE 
-//    * SYSCALL 17 sys_memmap
-//    */
-
-//   return 0;
-// }
 int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
 {
   // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
-  int pgn = PAGING64_PGN(addr);        // Page number (phần cao của VA)
-  int off = addr & ((1 << 12) - 1);    // Offset (12 bits thấp)
-  int fpn;                              // Frame number sẽ lấy từ pg_getpage
+  addr_t pgn = PAGING_PGN(addr);        // Page number (phần cao của VA)
+  addr_t off = PAGING_OFFST(addr);      // Offset (phần thấp của VA)
+  int fpn;                            // Frame number sẽ lấy từ pg_getpage
 
   // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
   if (pg_getpage(mm, pgn, &fpn, caller) != 0)
@@ -463,7 +423,7 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
 
   // BƯỚC 3: Tính địa chỉ vật lý (Physical Address)
   // PA = (FPN * PAGE_SIZE) + offset
-  int phyaddr = (fpn * PAGING64_PAGESZ) + off;
+  addr_t phyaddr = (fpn * PAGING64_PAGESZ) + off;
 
   // BƯỚC 4: Ghi byte vào RAM bằng syscall
   struct sc_regs regs;
@@ -500,16 +460,18 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
 int __read(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE *data)
 {
   pthread_mutex_lock(&mmvm_lock);
-  
   struct vm_rg_struct *currg = get_symrg_byid(caller->mm, rgid);
-  
-  if (currg == NULL) {
+
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
+
+  if (currg == NULL || cur_vma == NULL) /* Invalid memory identify */
+  {
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
-  
+
   pg_getval(caller->mm, currg->rg_start + offset, data, caller);
-  
+
   pthread_mutex_unlock(&mmvm_lock);
   return 0;
 }
@@ -525,6 +487,7 @@ int libread(
   int val = __read(proc, 0, source, offset, &data);
 
   *destination = data;
+printf("%s:%d\n", __func__, __LINE__);
 #ifdef IODUMP
   /* TODO dump IO content (if needed) */
 #ifdef PAGETBL_DUMP
@@ -582,6 +545,7 @@ int libwrite(
   {
     return -1;
   }
+printf("%s:%d\n", __func__, __LINE__);
 #ifdef IODUMP
 #ifdef PAGETBL_DUMP
   print_pgtbl(proc, 0, -1); // print max TBL
@@ -638,6 +602,17 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn)
   {
     return -1;
   }
+  
+  /* Special case: only one page in FIFO list */
+  if (pg->pg_next == NULL)
+  {
+    *retpgn = pg->pgn;
+    mm->fifo_pgn = NULL;
+    free(pg);
+    return 0;
+  }
+  
+  /* Find the last page (oldest in FIFO) */
   struct pgn_t *prev = NULL;
   while (pg->pg_next)
   {

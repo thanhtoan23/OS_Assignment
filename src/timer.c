@@ -141,7 +141,3 @@ void stop_timer() {
 		free(temp);
 	}
 }
-
-
-
-
