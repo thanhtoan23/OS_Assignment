@@ -1,0 +1,50 @@
+Dung luong Ram: 40960 
+Time slot   0
+===== PHYSICAL MEMORY DUMP =====
+masz : 40960 
+===== PHYSICAL MEMORY END-DUMP =====
+ld_routine
+Time slot   1
+	Loaded a process at input/proc/sc2, PID: 1 PRIO: 15
+	CPU 1: Dispatched process  1
+Page num 0 -> Address: 0 
+liballoc:215
+Page Table Dump for PID 1:
+print_pgtbl:
+ PDG=000071c53c000bd0 P4G=000071c53c001be0 PUD=000071c53c002bf0 PMD=000071c53c003c00
+  00000: [80000000] (FPN: 0)
+  00001: [80000001] (FPN: 1)
+	Loaded a process at input/proc/sc2, PID: 2 PRIO: 15
+Time slot   2
+Page num 2 -> Address: 8192 
+liballoc:215
+Page Table Dump for PID 1:
+print_pgtbl:
+ PDG=000071c53c000bd0 P4G=000071c53c001be0 PUD=000071c53c002bf0 PMD=000071c53c003c00
+  00000: [80000000] (FPN: 0)
+  00001: [80000001] (FPN: 1)
+  00002: [80000002] (FPN: 2)
+  00003: [80000003] (FPN: 3)
+	CPU 0: Dispatched process  2
+Page num 0 -> Address: 0 
+liballoc:215
+Page Table Dump for PID 2:
+print_pgtbl:
+ PDG=000071c540000bd0 P4G=000071c540001be0 PUD=000071c540002bf0 PMD=000071c540003c00
+  00000: [80000004] (FPN: 4)
+  00001: [80000005] (FPN: 5)
+Time slot   3
+	CPU 1: Processed  1 has finished
+Page num 2 -> Address: 8192 
+liballoc:215
+Page Table Dump for PID 2:
+print_pgtbl:
+ PDG=000071c540000bd0 P4G=000071c540001be0 PUD=000071c540002bf0 PMD=000071c540003c00
+  00000: [80000004] (FPN: 4)
+  00001: [80000005] (FPN: 5)
+  00002: [80000006] (FPN: 6)
+  00003: [80000007] (FPN: 7)
+	CPU 1 stopped
+Time slot   4
+	CPU 0: Processed  2 has finished
+	CPU 0 stopped
