@@ -75,7 +75,7 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
   pthread_mutex_lock(&mmvm_lock);
   struct vm_rg_struct rgnode;
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
-  int inc_sz=0;
+  addr_t inc_sz=0;
   
 
   if (cur_vma == NULL) {
@@ -102,15 +102,13 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
   /*Attempt to increate limit to get space */
   
 #ifdef MM64
-  inc_sz = (uint32_t)(size/(int)PAGING64_PAGESZ);
-  inc_sz = inc_sz + 1;
+  inc_sz = PAGING64_PAGE_ALIGNSZ(size);
   
 #else
   inc_sz = PAGING_PAGE_ALIGNSZ(size);
   
 #endif  
   int old_sbrk;
-  inc_sz = inc_sz + 1;
   old_sbrk = cur_vma->sbrk;
   /* TODO INCREASE THE LIMIT
    * SYSCALL 1 sys_memmap
@@ -133,9 +131,9 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
   /*Successful increase limit */
   // printf("old sbrk: %d \n",old_sbrk);
   // printf("New sbrk: %d \n",new_sbrk);
-  if (get_free_vmrg_area(caller, vmaid, size, &rgnode) == 0){
+  if (get_free_vmrg_area(caller, vmaid, inc_sz, &rgnode) == 0){
     caller->mm->symrgtbl[rgid].rg_start = old_sbrk;
-    caller->mm->symrgtbl[rgid].rg_end = old_sbrk + size;
+    caller->mm->symrgtbl[rgid].rg_end = old_sbrk + inc_sz;
     caller->mm->symrgtbl[rgid].rg_next = NULL;
     *alloc_addr = old_sbrk;
   }
@@ -160,31 +158,75 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
 int __free(struct pcb_t *caller, int vmaid, int rgid)
 {
   pthread_mutex_lock(&mmvm_lock);
+  
+  printf("  free: PID=%d, vmaid=%d, rgid=%d\n", caller->pid, vmaid, rgid);
 
   if (rgid < 0 || rgid > PAGING_MAX_SYMTBL_SZ)
   {
+    printf("ERROR: Invalid rgid %d (out of range)\n", rgid);
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
 
-  /* TODO: Manage the collect freed region to freerg_list */
+  /* TODO: Manage the collect freed region to freereg_list */
   struct vm_rg_struct *rgnode = get_symrg_byid(caller->mm, rgid);
+  
+  printf("  Region from symtbl[%d]: start=%lu, end=%lu\n", 
+         rgid, rgnode->rg_start, rgnode->rg_end);
 
   if (rgnode->rg_start == 0 && rgnode->rg_end == 0)
   {
+    printf("WARNING: Region %d is already freed or not allocated\n", rgid);
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
+  
   struct vm_rg_struct *freerg_node = malloc(sizeof(struct vm_rg_struct));
+  if (!freerg_node) {
+    printf("ERROR: Cannot allocate memory for free region node\n");
+    pthread_mutex_unlock(&mmvm_lock);
+    return -1;
+  }
+  
   freerg_node->rg_start = rgnode->rg_start;
   freerg_node->rg_end = rgnode->rg_end;
   freerg_node->rg_next = NULL;
 
+  printf("  Freeing region: [%lu -> %lu] (size: %lu bytes)\n", 
+         freerg_node->rg_start, freerg_node->rg_end,
+         freerg_node->rg_end - freerg_node->rg_start);
+
+  // Reset the original region in symbol table
   rgnode->rg_start = rgnode->rg_end = 0;
   rgnode->rg_next = NULL;
 
   /*enlist the obsoleted memory region */
-  enlist_vm_freerg_list(caller->mm, freerg_node);
+  int result = enlist_vm_freerg_list(caller->mm, freerg_node);
+  if (result != 0) {
+    printf("ERROR: Failed to enlist region to free list\n");
+    free(freerg_node);
+    pthread_mutex_unlock(&mmvm_lock);
+    return -1;
+  }
+  
+  printf("  Successfully freed region %d\n", rgid);
+  
+  // Debug: Print free region list after operation
+  #ifdef DEBUG_FREE
+  printf("  Current free region list for vmaid %d:\n", vmaid);
+  struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
+  if (cur_vma) {
+    struct vm_rg_struct *temp = cur_vma->vm_freerg_list;
+    int count = 0;
+    while (temp) {
+      printf("    [%d] [%lu -> %lu]\n", count++, temp->rg_start, temp->rg_end);
+      temp = temp->rg_next;
+    }
+    if (count == 0) {
+      printf("    (empty)\n");
+    }
+  }
+  #endif
 
   pthread_mutex_unlock(&mmvm_lock);
   return 0;
@@ -250,112 +292,125 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 {
     uint32_t old_pte = pte_get_entry(caller, pgn);
 
+    printf("=== pg_getpage DEBUG ===\n");
+    printf("PID: %d, Request page: pgn=%d, old_pte=0x%08x\n", 
+           caller->pid, pgn, old_pte);
+    printf("Page Present? %s\n", 
+           PAGING_PAGE_PRESENT(old_pte) ? "YES" : "NO");
+    printf("Page Swapped? %s\n", 
+           (old_pte & PAGING_PTE_SWAPPED_MASK) ? "YES" : "NO");
+
     if (!PAGING_PAGE_PRESENT(old_pte))
     { 
-        /* Xảy ra Page Fault: Trang không có trong RAM */
-        addr_t tgtfpn; // Target Frame Page Number
-        struct sc_regs regs; // Dùng cho System Call
+        printf(">>> PAGE FAULT TRIGGERED! <<<\n");
+        addr_t tgtfpn;
+        struct sc_regs regs;
 
-        // Kiểm tra xem trang này có đang nằm trong SWAP không (Khả năng 1)
         int is_swapped = (old_pte & PAGING_PTE_SWAPPED_MASK);
         addr_t old_swpfpn = 0;
         if (is_swapped) {
-            old_swpfpn = PAGING_SWP(old_pte); // Lấy địa chỉ swap cũ
+            old_swpfpn = PAGING_SWP(old_pte);
+            printf("Page is in SWAP at swpfpn=%lu\n", old_swpfpn);
+        } else {
+            printf("Page not in SWAP (first access)\n");
         }
         
         // --- 1. CỐ GẮNG LẤY FRAME TRỐNG TRONG RAM ---
         if (MEMPHY_get_freefp(caller->krnl->mram, &tgtfpn) == 0) 
         { 
-          printf("1\n");
-            // RAM còn chỗ! Dùng frame này ngay.
+            printf("RAM has free frame: fpn=%lu\n", tgtfpn);
+            
             if (is_swapped) 
             {
-                /* Trường hợp 1: Trang đã bị Swap Out, giờ Swap In về Frame trống */
+                printf("SWAP IN: SWAP(%lu) -> RAM(%lu)\n", 
+                       old_swpfpn, tgtfpn);
                 
-                // Swap từ MEMSWP (old_swpfpn) sang MEMRAM (tgtfpn)
                 regs.a1 = SYSMEM_SWP_OP;
                 regs.a2 = old_swpfpn;
                 regs.a3 = tgtfpn;
-                // PHẢI DÙNG SYSCALL vì di chuyển dữ liệu vật lý từ thiết bị Swap vào RAM
                 syscall(caller->krnl, caller->pid, 17, &regs); 
                 
-                // Trả frame swap cũ về danh sách trống của Swap
                 MEMPHY_put_freefp(caller->krnl->active_mswp, old_swpfpn);
+                printf("Freed swap frame %lu back to SWAP\n", old_swpfpn);
 
             } 
             else 
             {
-              printf("2\n");
-                /* Trường hợp 2: Trang chưa từng được cấp phát/không nằm trong Swap (Lần đầu) */
-                // Không cần di chuyển dữ liệu, Frame trống là đủ.
+                printf("First allocation in RAM at fpn=%lu\n", tgtfpn);
             }
             
-            // Cập nhật PTE mới để trỏ đến Frame vật lý mới (tgtfpn) và đánh dấu Present
             pte_set_fpn(caller, pgn, tgtfpn); 
+            printf("Updated PTE for pgn=%d -> fpn=%lu\n", pgn, tgtfpn);
 
         } 
         else 
         {
-            // --- 2. RAM ĐÃ ĐẦY! PHẢI TÌM VICTIM ĐỂ SWAP OUT ---
+            printf("RAM FULL! Need to find VICTIM for SWAP OUT\n");
+            
             addr_t vicpgn, vicfpn, swpfpn;
             uint32_t vicpte;
 
-            /* Tìm victim page */
-            if (find_victim_page(caller->krnl->mm, &vicpgn) == -1) {
+            if (find_victim_page(caller->mm, &vicpgn) == -1) {
                 printf("ERROR: Cannot find victim page\n");
                 return -1;
             }
 
-            /* Lấy PTE và FPN của victim */
             vicpte = pte_get_entry(caller, vicpgn);
             vicfpn = PAGING_FPN(vicpte);
+            printf("Selected VICTIM: pgn=%lu, fpn=%lu, pte=0x%08x\n", 
+                   vicpgn, vicfpn, vicpte);
 
-            /* Lấy free frame trong MEMSWP cho victim */
             if (MEMPHY_get_freefp(caller->krnl->active_mswp, &swpfpn) == -1) {
                 printf("ERROR: Cannot get free frame in SWAP\n");
                 return -1;
             }
+            printf("Free SWAP frame obtained: swpfpn=%lu\n", swpfpn);
 
-            /* Swap Out: Copy victim frame (vicfpn) đến swap (swpfpn) */
+            // Swap Out
+            printf("SWAP OUT: RAM(%lu) -> SWAP(%lu)\n", vicfpn, swpfpn);
             regs.a1 = SYSMEM_SWP_OP;
             regs.a2 = vicfpn;
             regs.a3 = swpfpn;
-            // PHẢI DÙNG SYSCALL vì di chuyển dữ liệu vật lý từ RAM ra thiết bị Swap
             syscall(caller->krnl, caller->pid, 17, &regs);
 
-            /* Cập nhật PTE của victim để trỏ đến Swap */
             pte_set_swap(caller, vicpgn, 0, swpfpn);
+            printf("Updated VICTIM PTE (pgn=%lu) to point to SWAP(%lu)\n", 
+                   vicpgn, swpfpn);
 
-            /* Frame của victim (vicfpn) giờ là Frame mục tiêu (tgtfpn) */
             tgtfpn = vicfpn;
+            printf("Victim frame %lu now available for new page\n", tgtfpn);
 
-            // --- XỬ LÝ TRANG HIỆN TẠI VÀO FRAME MỚI (tgtfpn) ---
             if (is_swapped) 
             {
-                /* Trường hợp 1: Trang đã bị Swap Out, giờ Swap In về Frame vừa giải phóng */
-                
-                // Swap từ MEMSWP (old_swpfpn) sang MEMRAM (tgtfpn)
+                printf("SWAP IN: SWAP(%lu) -> RAM(%lu)\n", 
+                       old_swpfpn, tgtfpn);
                 regs.a1 = SYSMEM_SWP_OP;
                 regs.a2 = old_swpfpn;
                 regs.a3 = tgtfpn;
-                // PHẢI DÙNG SYSCALL
                 syscall(caller->krnl, caller->pid, 17, &regs); 
 
-                // Trả frame swap cũ về danh sách trống của Swap
                 MEMPHY_put_freefp(caller->krnl->active_mswp, old_swpfpn);
+                printf("Freed swap frame %lu back to SWAP\n", old_swpfpn);
+            } else {
+                printf("New page allocated to RAM frame %lu\n", tgtfpn);
             }
-            /* Nếu không Swap Out (Trường hợp 2), Frame tgtfpn đã được làm sạch */
 
-            // Cập nhật PTE mới để trỏ đến Frame vật lý mới (tgtfpn) và đánh dấu Present
             pte_set_fpn(caller, pgn, tgtfpn);
+            printf("Updated PTE for pgn=%d -> fpn=%lu\n", pgn, tgtfpn);
         }
         
-        // Thêm/cập nhật trang mới này vào danh sách quản lý (ví dụ: FIFO)
-        enlist_pgn_node(&caller->krnl->mm->fifo_pgn, pgn);
+        enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
+        printf("Added pgn=%d to FIFO list\n", pgn);
+    } else {
+        printf("Page already in RAM\n");
+        // // Add page to FIFO list to maintain tracking
+        // enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
+        // printf("Added pgn=%d to FIFO list (already in RAM)\n", pgn);
     }
 
-    /* Sau khi xử lý Page Fault (nếu có), trang đã có trong RAM */
     *fpn = PAGING_FPN(pte_get_entry(caller, pgn));
+    printf("Returning fpn=%d for pgn=%d\n", *fpn, pgn);
+    printf("=== End pg_getpage ===\n\n");
 
     return 0;
 }
@@ -370,8 +425,8 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
 int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 {
   // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
-  addr_t pgn = PAGING_PGN(addr);        // Page number (phần cao của VA)
-  addr_t off = PAGING_OFFST(addr);      // Offset (phần thấp của VA)
+  addr_t pgn = PAGING64_PGN(addr);        // Page number (phần cao của VA)
+  addr_t off = PAGING64_OFFST(addr);      // Offset (phần thấp của VA)
   int fpn;                            // Frame number sẽ lấy từ pg_getpage
 
   // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
@@ -406,8 +461,8 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
 int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
 {
   // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
-  addr_t pgn = PAGING_PGN(addr);        // Page number (phần cao của VA)
-  addr_t off = PAGING_OFFST(addr);      // Offset (phần thấp của VA)
+  addr_t pgn = PAGING64_PGN(addr);        // Page number (phần cao của VA)
+  addr_t off = PAGING64_OFFST(addr);      // Offset (phần thấp của VA)
   int fpn;                            // Frame number sẽ lấy từ pg_getpage
 
   // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
@@ -575,28 +630,36 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn)
   /* TODO: Implement the theorical mechanism to find the victim page */
   if (!pg)
   {
+    printf("ERROR: FIFO list is empty, no victim found\n");
     return -1;
   }
+  
+  // DEBUG: In ra danh sách FIFO hiện tại
+  printf("\n=== FIFO List before victim selection ===\n");
+  struct pgn_t *temp = mm->fifo_pgn;
+  int count = 0;
+  while (temp) {
+    printf("  [%d] pgn=%lu\n", count++, temp->pgn);
+    temp = temp->pg_next;
+  }
+  printf("=== End FIFO List ===\n\n");
   
   /* Special case: only one page in FIFO list */
   if (pg->pg_next == NULL)
   {
     *retpgn = pg->pgn;
+    printf("Selected victim (only page): pgn=%lu\n", pg->pgn);
     mm->fifo_pgn = NULL;
     free(pg);
     return 0;
   }
   
-  /* Find the last page (oldest in FIFO) */
-  struct pgn_t *prev = NULL;
-  while (pg->pg_next)
-  {
-    prev = pg;
-    pg = pg->pg_next;
-  }
+  /* FIFO: Select the first page (oldest) */
   *retpgn = pg->pgn;
-  prev->pg_next = NULL;
-
+  printf("Selected victim (FIFO first): pgn=%lu\n", pg->pgn);
+  
+  /* Remove from list */
+  mm->fifo_pgn = pg->pg_next;
   free(pg);
 
   return 0;
@@ -608,7 +671,7 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn)
  *@size: allocated size
  *
  */
-int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_struct *newrg)
+int get_free_vmrg_area(struct pcb_t *caller, int vmaid, addr_t size, struct vm_rg_struct *newrg)
 {
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
 

@@ -14,6 +14,8 @@
  */
 
 #include "mm64.h"
+#include "syscall.h"
+#include "libmem.h"
 #include <stdlib.h>
 #include <stdio.h>
 #include <time.h>
@@ -158,24 +160,32 @@ static addr_t *__get_pte_ptr(struct mm_struct *mm, addr_t pgn, int alloc) {
  * pte_set_swap - Set PTE entry for swapped page
  * [cite: 526, 527]
  */
+/*
+ * pte_set_swap - Set PTE entry for swapped page
+ */
 int pte_set_swap(struct pcb_t *caller, addr_t pgn, int swptyp, addr_t swpoff)
 {
-  pthread_mutex_lock(&mm_lock); // Protect table structure
+  pthread_mutex_lock(&mm_lock);
   
-  addr_t *pte = __get_pte_ptr(caller->mm, pgn, 1); // Alloc if missing
+  addr_t *pte = __get_pte_ptr(caller->mm, pgn, 1);
   
   if (pte == NULL) {
       pthread_mutex_unlock(&mm_lock);
       return -1;
   }
 
-  CLRBIT(*pte, PAGING_PTE_PRESENT_MASK);
+  printf(">>> pte_set_swap: PID=%d, pgn=%lu -> SWAP(fpn=%lu)\n", 
+         caller->pid, pgn, swpoff);
+  
+  SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
   SETBIT(*pte, PAGING_PTE_SWAPPED_MASK);
-  CLRBIT(*pte, PAGING_PTE_DIRTY_MASK); // Usually cleared on swap out
+  CLRBIT(*pte, PAGING_PTE_DIRTY_MASK);
 
   SETVAL(*pte, swptyp, PAGING_PTE_SWPTYP_MASK, PAGING_PTE_SWPTYP_LOBIT);
   SETVAL(*pte, swpoff, PAGING_PTE_SWPOFF_MASK, PAGING_PTE_SWPOFF_LOBIT);
 
+  printf("New PTE value: 0x%08x\n", (uint32_t)*pte);
+  
   pthread_mutex_unlock(&mm_lock);
   return 0;
 }
@@ -186,24 +196,28 @@ int pte_set_swap(struct pcb_t *caller, addr_t pgn, int swptyp, addr_t swpoff)
  */
 int pte_set_fpn(struct pcb_t *caller, addr_t pgn, addr_t fpn)
 {
-  pthread_mutex_lock(&mm_lock); // Protect table structure
+  pthread_mutex_lock(&mm_lock);
 
-  addr_t *pte = __get_pte_ptr(caller->mm, pgn, 1); // Alloc if missing
+  addr_t *pte = __get_pte_ptr(caller->mm, pgn, 1);
 
   if (pte == NULL) {
       pthread_mutex_unlock(&mm_lock);
       return -1;
   }
 
+  printf(">>> pte_set_fpn: PID=%d, pgn=%lu -> RAM(fpn=%lu)\n", 
+         caller->pid, pgn, fpn);
+  
   SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
   CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
 
   SETVAL(*pte, fpn, PAGING_PTE_FPN_MASK, PAGING_PTE_FPN_LOBIT);
   
+  printf("New PTE value: 0x%08x\n", (uint32_t)*pte);
+  
   pthread_mutex_unlock(&mm_lock);
   return 0;
 }
-
 
 /* Get PTE page table entry */
 uint32_t pte_get_entry(struct pcb_t *caller, addr_t pgn)
@@ -239,7 +253,7 @@ int vmap_pgd_memset(struct pcb_t *caller, addr_t addr, int pgnum)
 {
   /* Emulate page directory working without real allocation (for sparse testing) */
   int i;
-  addr_t pgn_start = PAGING_PGN(addr);
+  addr_t pgn_start = PAGING64_PGN(addr);
   
   for(i = 0; i < pgnum; i++) {
       // Just ensure the directories exist
@@ -262,7 +276,6 @@ addr_t vmap_page_range(struct pcb_t *caller,
 {
   struct framephy_struct *fpit = frames;
   int pgit = 0;
-  //printf("Toi co goi page_range nha --------------------------------\n");
   addr_t pgn = PAGING64_PGN(addr);
 
   printf("Page num %lu -> Address: %lu \n",pgn,addr);
@@ -288,36 +301,109 @@ addr_t vmap_page_range(struct pcb_t *caller,
 
 addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_struct **frm_lst)
 {
+  printf("ALLOC PAGE RANGE, PID: %d\n", caller->pid);
   addr_t ret_fpn;
   struct framephy_struct *newfp_str;
   struct framephy_struct *last_fp = NULL;
   
   *frm_lst = NULL;
 
-  for (addr_t pgit = 0; pgit < req_pgnum; pgit++){
+  for (addr_t pgit = 0; pgit < req_pgnum; pgit++) {
     newfp_str = malloc(sizeof(struct framephy_struct));
+    if (!newfp_str) {
+      // Free any already allocated frames
+      while (*frm_lst) {
+        struct framephy_struct *temp = *frm_lst;
+        *frm_lst = (*frm_lst)->fp_next;
+        free(temp);
+      }
+      return -1;
+    }
 
     // Lock access to global Physical Memory Manager (MEMPHY)
     int res = MEMPHY_get_freefp(caller->krnl->mram, (addr_t *)&ret_fpn);
 
-    if (res == 0)
-    {
+    if (res == 0) {
+      // Successfully got a free frame from RAM
       newfp_str->fpn = ret_fpn;
       newfp_str->fp_next = NULL;
 
       if (*frm_lst == NULL) {
-          *frm_lst = newfp_str;
+        *frm_lst = newfp_str;
       } else {
-          last_fp->fp_next = newfp_str;
+        last_fp->fp_next = newfp_str;
       }
       last_fp = newfp_str;
     }
-    else
-    { 
-      // Rollback not implemented for simplicity, but critical error
-      printf("Day ne %d\n",req_pgnum);
-      return -3000; // Out of memory code defined in vm_map_ram
+    else { 
+      // RAM is full, need to swap out a page
+      printf("RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range\n");
       
+      addr_t vicpgn, vicfpn, swpfpn;
+      uint32_t vicpte;
+      struct sc_regs regs;
+
+      // Find a victim page to swap out
+      if (find_victim_page(caller->mm, &vicpgn) == -1) {
+        printf("ERROR: Cannot find victim page in alloc_pages_range\n");
+        free(newfp_str);
+        
+        // Rollback: free any already allocated frames
+        while (*frm_lst) {
+          struct framephy_struct *temp = *frm_lst;
+          *frm_lst = (*frm_lst)->fp_next;
+          free(temp);
+        }
+        return -1;
+      }
+
+      vicpte = pte_get_entry(caller, vicpgn);
+      vicfpn = PAGING_FPN(vicpte);
+      printf("Selected VICTIM: pgn=%lu, fpn=%lu, pte=0x%08x\n", 
+             vicpgn, vicfpn, vicpte);
+
+      // Get a free frame in SWAP
+      if (MEMPHY_get_freefp(caller->krnl->active_mswp, &swpfpn) == -1) {
+        printf("ERROR: SWAP is also FULL! Cannot allocate more pages\n");
+        free(newfp_str);
+        
+        // Rollback: free any already allocated frames
+        while (*frm_lst) {
+          struct framephy_struct *temp = *frm_lst;
+          *frm_lst = (*frm_lst)->fp_next;
+          free(temp);
+        }
+        printf("Out out RAM and SWAP, require: %d\n",req_pgnum);
+        return -3000; // Special error code for "Out of both RAM and SWAP"
+      }
+      
+      printf("Free SWAP frame obtained: swpfpn=%lu\n", swpfpn);
+
+      // Swap Out: RAM -> SWAP
+      printf("SWAP OUT: RAM(%lu) -> SWAP(%lu)\n", vicfpn, swpfpn);
+      regs.a1 = SYSMEM_SWP_OP;
+      regs.a2 = vicfpn;
+      regs.a3 = swpfpn;
+      syscall(caller->krnl, caller->pid, 17, &regs);
+
+      // Update victim PTE to point to SWAP
+      pte_set_swap(caller, vicpgn, 0, swpfpn);
+      printf("Updated VICTIM PTE (pgn=%lu) to point to SWAP(%lu)\n", 
+             vicpgn, swpfpn);
+
+      // Now we can use the victim's frame for the new page
+      ret_fpn = vicfpn;
+      printf("Victim frame %lu now available for new page allocation\n", ret_fpn);
+
+      newfp_str->fpn = ret_fpn;
+      newfp_str->fp_next = NULL;
+
+      if (*frm_lst == NULL) {
+        *frm_lst = newfp_str;
+      } else {
+        last_fp->fp_next = newfp_str;
+      }
+      last_fp = newfp_str;
     }
   }
 
@@ -340,7 +426,7 @@ addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapst
 
   if (ret_alloc == -3000)
   {
-    printf("Het memory \n");
+    printf("Out of memory\n");
     return -1; // Out of Memory
   }
 
@@ -351,8 +437,15 @@ addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapst
 
 /* Swap copy content page from source frame to destination frame */
 int __swap_cp_page(struct memphy_struct *mpsrc, addr_t srcfpn,
-                   struct memphy_struct *mpdst, addr_t dstfpn)
+                   struct memphy_struct *mpdst, addr_t dstfpn, struct pcb_t *caller)
 {
+  printf("=== SWAP OPERATION ===\n");
+  printf("Copying from %s(fpn=%lu) to %s(fpn=%lu)\n",
+         (mpsrc == caller->krnl->mram) ? "RAM" : "SWAP",
+         srcfpn,
+         (mpdst == caller->krnl->mram) ? "RAM" : "SWAP",
+         dstfpn);
+  
   addr_t cellidx;
   addr_t addrsrc, addrdst;
   for (cellidx = 0; cellidx < PAGING64_PAGESZ; cellidx++)
@@ -365,6 +458,8 @@ int __swap_cp_page(struct memphy_struct *mpsrc, addr_t srcfpn,
     MEMPHY_write(mpdst, addrdst, data);
   }
 
+  printf("Swap completed successfully\n");
+  printf("=== End SWAP ===\n\n");
   return 0;
 }
 
@@ -426,7 +521,8 @@ int enlist_pgn_node(struct pgn_t **plist, addr_t pgn)
   pnode->pgn = pgn;
   pnode->pg_next = *plist;
   *plist = pnode;
-
+  printf("===== Add FIFO ====\n");
+  print_list_pgn(pnode);
   return 0;
 }
 
@@ -488,7 +584,7 @@ int print_list_pgn(struct pgn_t *ip)
     printf("va[%ld]-\n", ip->pgn);
     ip = ip->pg_next;
   }
-  printf("n");
+  printf("\n");
   return 0;
 }
 
@@ -500,10 +596,12 @@ void print_pgtbl_recursive(addr_t *table, int level, addr_t current_prefix) {
         if (table[i] == 0) continue;
 
         if (level == 1) { // PT Level, table[i] is PTE
-             printf("  %05lx: [%08x] (FPN: %ld)\n", 
+             printf("  %05lx: [%08x] (FPN: %ld) (PRE: %d) (SWA: %d)\n", 
                     (current_prefix << 9) | i, 
                     (uint32_t)table[i], 
-                    PAGING_FPN(table[i]));
+                    PAGING_FPN(table[i]),
+                    PAGING_PTE_GET_PRESENT(table[i]),
+                    PAGING_PTE_GET_SWAPPED(table[i]));
         } else {
              // Intermediate levels, table[i] is pointer to next table
              print_pgtbl_recursive((addr_t *)table[i], level - 1, (current_prefix << 9) | i);

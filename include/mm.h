@@ -99,6 +99,30 @@
 #define INCLUDE(x1,x2,y1,y2) (0)
 #define OVERLAP(x1,x2,y1,y2) (0)
 
+/* Get present bit (bit 31) */
+#define PAGING_PTE_GET_PRESENT(pte)   GETBIT((pte), PAGING_PTE_PRESENT_MASK) ? 1 : 0
+
+/* Get swapped bit (bit 30) */
+#define PAGING_PTE_GET_SWAPPED(pte)   GETBIT((pte), PAGING_PTE_SWAPPED_MASK) ? 1 : 0
+
+/* Get dirty bit (bit 28) - nếu cần */
+#define PAGING_PTE_GET_DIRTY(pte)     GETBIT((pte), PAGING_PTE_DIRTY_MASK)
+
+/* Get reserve bit (bit 29) - nếu cần */
+#define PAGING_PTE_GET_RESERVE(pte)   GETBIT((pte), PAGING_PTE_RESERVE_MASK)
+
+/* Get swap type bits (bits 0-4) - chỉ khi swapped = 1 */
+#define PAGING_PTE_GET_SWPTYP(pte)    GETVAL((pte), PAGING_PTE_SWPTYP_MASK, PAGING_PTE_SWPTYP_LOBIT)
+
+/* Get swap offset bits (bits 5-25) - chỉ khi swapped = 1 */
+#define PAGING_PTE_GET_SWPOFF(pte)    GETVAL((pte), PAGING_PTE_SWPOFF_MASK, PAGING_PTE_SWPOFF_LOBIT)
+
+/* Get user-defined number bits (bits 15-27) - khi present = 1 */
+#define PAGING_PTE_GET_USRNUM(pte)    GETVAL((pte), PAGING_PTE_USRNUM_MASK, PAGING_PTE_USRNUM_LOBIT)
+
+/* Get frame number bits (bits 0-12) - khi present = 1 */
+#define PAGING_PTE_GET_FPN(pte)       GETVAL((pte), PAGING_PTE_FPN_MASK, PAGING_PTE_FPN_LOBIT)
+
 /* VM region prototypes */
 struct vm_rg_struct * init_vm_rg(addr_t rg_start, addr_t rg_end);
 int enlist_vm_rg_node(struct vm_rg_struct **rglist, struct vm_rg_struct* rgnode);
@@ -109,7 +133,7 @@ addr_t vmap_page_range(struct pcb_t *caller, addr_t addr, int pgnum,
 addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapstart, int incpgnum, struct vm_rg_struct *ret_rg);
 addr_t alloc_pages_range(struct pcb_t *caller, int incpgnum, struct framephy_struct **frm_lst);
 int __swap_cp_page(struct memphy_struct *mpsrc, addr_t srcfpn,
-                struct memphy_struct *mpdst, addr_t dstfpn) ;
+                struct memphy_struct *mpdst, addr_t dstfpn, struct pcb_t *caller);
 int get_pd_from_address(addr_t addr, addr_t* pgd, addr_t* p4d, addr_t* pud, addr_t* pmd, addr_t* pt);
 int get_pd_from_pagenum(addr_t pgn, addr_t* pgd, addr_t* p4d, addr_t* pud, addr_t* pmd, addr_t* pt);
 int pte_set_fpn(struct pcb_t *caller, addr_t pgn, addr_t fpn);
@@ -145,7 +169,7 @@ int pgwrite(
 /* Local VM prototypes */
 struct vm_rg_struct * get_symrg_byid(struct mm_struct* mm, int rgid);
 int validate_overlap_vm_area(struct pcb_t *caller, int vmaid, addr_t vmastart, addr_t vmaend);
-int get_free_vmrg_area(struct pcb_t *caller, int vmaid, int size, struct vm_rg_struct *newrg);
+int get_free_vmrg_area(struct pcb_t *caller, int vmaid, addr_t size, struct vm_rg_struct *newrg);
 int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz);
 int find_victim_page(struct mm_struct* mm, addr_t *pgn);
 struct vm_area_struct *get_vma_by_num(struct mm_struct *mm, int vmaid);

@@ -171,7 +171,6 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
    pthread_mutex_lock(&mm_lock);
    struct framephy_struct *fp = mp->free_fp_list; // ← Lấy frame đầu
    if (fp == NULL){
-      printf("3\n");
       pthread_mutex_unlock(&mm_lock);
       return -1;
    }

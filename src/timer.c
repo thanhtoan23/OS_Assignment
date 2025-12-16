@@ -19,7 +19,7 @@ static int timer_stop = 0;
 
 
 static void * timer_routine(void * args) {
-	printf("Time slot %3llu\n", current_time()); // Thêm cái này
+	printf("Time slot %lu\n", current_time()); // Thêm cái này
 	while (!timer_stop) {
 		//printf("Time slot %3llu\n", current_time()); Xóa cái này
 		int fsh = 0;
@@ -51,7 +51,7 @@ static void * timer_routine(void * args) {
 		_time++;
 
 		// Thêm cái này
-        printf("Time slot %3llu\n", current_time());
+        printf("Time slot %3lu\n", current_time());
         fflush(stdout);
 		
 		/* Let devices continue their job */

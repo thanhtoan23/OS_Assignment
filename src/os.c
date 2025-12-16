@@ -4,7 +4,7 @@
 #include "sched.h"
 #include "loader.h"
 #include "mm.h"
-
+#include <unistd.h>
 #include <pthread.h>
 #include <stdio.h>
 #include <string.h>
@@ -284,7 +284,7 @@ int main(int argc, char * argv[]) {
 	mm_ld_args->mram = (struct memphy_struct *) &mram;
 	mm_ld_args->mswp = (struct memphy_struct**) &mswp;
 	mm_ld_args->active_mswp = (struct memphy_struct *) &mswp[0];
-        mm_ld_args->active_mswp_id = 0;
+    mm_ld_args->active_mswp_id = 0;
 #endif
 
 	/* Init scheduler */
