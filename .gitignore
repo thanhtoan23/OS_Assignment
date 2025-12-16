@@ -1,0 +1,49 @@
+# Windows Zone Identifier
+*:Zone.Identifier
+
+# Compiled Object files
+*.o
+*.obj
+*.slo
+*.lo
+
+# Executables
+os
+os.exe
+sched
+mem
+pdg
+
+# Debug files
+*.dSYM/
+*.su
+*.idb
+*.pdb
+
+# Test output files
+test_*.txt
+*.output
+
+# Build directories
+obj/
+build/
+
+# Editor/IDE files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Temporary files
+*.tmp
+*.bak
+*.log
+
+# Core dumps
+core
+core.*
+
+# Generated files
+src/syscalltbl.lst
