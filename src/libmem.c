@@ -75,8 +75,6 @@ int __alloc(struct pcb_t *caller, int vmaid, int rgid, addr_t size, addr_t *allo
   pthread_mutex_lock(&mmvm_lock);
   struct vm_rg_struct rgnode;
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
-  int inc_sz=0;
-  
 
   if (cur_vma == NULL) {
     printf("DEBUG ERROR: cur_vma is NULL for vmaid %d. Process memory not initialized?\n", vmaid);
@@ -519,10 +517,17 @@ int __write(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE value
     return -1;
   }
   
+  // Check if region is freed (both start and end are 0)
+  if (currg->rg_start == 0 && currg->rg_end == 0) {
+    // Region has been freed, silently skip write
+    pthread_mutex_unlock(&mmvm_lock);
+    return 0;
+  }
+  
   // Check bounds
   if (currg->rg_start + offset >= currg->rg_end) {
-    printf("ERROR: Write offset %d out of bounds [%d, %d)\n", 
-           offset, currg->rg_start, currg->rg_end);
+    printf("ERROR: Write offset %ld out of bounds [%ld, %ld)\n", 
+           (unsigned long)offset, (unsigned long)currg->rg_start, (unsigned long)currg->rg_end);
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
