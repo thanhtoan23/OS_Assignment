@@ -1,4 +1,7 @@
-10 2
-alloc 8000 1
+10 4
 alloc 8000 2
+write 25 1 0 
+write 35 1 4
+read 3 4 4
+
 

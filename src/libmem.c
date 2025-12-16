@@ -417,7 +417,7 @@ int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
   // BƯỚC 3: Tính địa chỉ vật lý (Physical Address)
   // PA = (FPN * PAGE_SIZE) + offset
   addr_t phyaddr = (fpn * PAGING64_PAGESZ) + off;
-
+  printf("Physic Addr %llu: ", phyaddr);
   // BƯỚC 4: Ghi byte vào RAM bằng syscall
   struct sc_regs regs;
   regs.a1 = SYSMEM_IO_WRITE;  // Lệnh = "ghi vào RAM"
@@ -503,7 +503,7 @@ int __write(struct pcb_t *caller, int vmaid, int rgid, addr_t offset, BYTE value
   }
 
   pg_setval(caller->mm, currg->rg_start + offset, value, caller);
-
+  printf("Offest %llu -> ghi value: %d \n",currg->rg_start + offset,value );
   pthread_mutex_unlock(&mmvm_lock);
   return 0;
 }

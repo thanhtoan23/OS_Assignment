@@ -113,6 +113,7 @@ int MEMPHY_seq_write(struct memphy_struct *mp, addr_t addr, BYTE value)
  */
 int MEMPHY_write(struct memphy_struct *mp, addr_t addr, BYTE data)
 {
+   printf("MEMPY write address: %lu -> val: %d \n",addr, data);
    if (mp == NULL)
       return -1;
 
