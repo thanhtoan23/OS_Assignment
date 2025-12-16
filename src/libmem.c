@@ -301,7 +301,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
             uint32_t vicpte;
 
             /* Tìm victim page */
-            if (find_victim_page(caller->krnl->mm, &vicpgn) == -1) {
+            if (find_victim_page(caller->mm, &vicpgn) == -1) {
                 printf("ERROR: Cannot find victim page\n");
                 return -1;
             }
@@ -351,7 +351,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
         }
         
         // Thêm/cập nhật trang mới này vào danh sách quản lý (ví dụ: FIFO)
-        enlist_pgn_node(&caller->krnl->mm->fifo_pgn, pgn);
+        enlist_pgn_node(&caller->mm->fifo_pgn, pgn);
     }
 
     /* Sau khi xử lý Page Fault (nếu có), trang đã có trong RAM */
