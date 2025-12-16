@@ -30,7 +30,7 @@ int queue_empty(void) {
 	unsigned long prio;
 	for (prio = 0; prio < MAX_PRIO; prio++)
 		if(!empty(&mlq_ready_queue[prio])) 
-			return -1;
+			return 0;
 #endif
 	return (empty(&ready_queue) && empty(&run_queue));
 }
@@ -64,12 +64,12 @@ struct pcb_t * get_mlq_proc(void) {
 
 
 	int retry_count = 0;
-	const int MAX_RETRIES = 5;
+	const int MAX_RETRIES = 2;
 
 	while (queue_empty() && retry_count < MAX_RETRIES) {
-		pthread_mutex_unlock(&queue_lock); // Nhả khóa cho Loader chạy
-		usleep(1000); // Ngủ 1ms
-		pthread_mutex_lock(&queue_lock);   // Lấy lại khóa để kiểm tra tiếp
+		pthread_mutex_unlock(&queue_lock); 
+		usleep(1000); 
+		pthread_mutex_lock(&queue_lock);  
 		retry_count++;
 	}
 
@@ -275,5 +275,3 @@ void add_proc(struct pcb_t * proc) {
 	pthread_mutex_unlock(&queue_lock);	
 }
 #endif
-
-

@@ -169,7 +169,7 @@ int pte_set_swap(struct pcb_t *caller, addr_t pgn, int swptyp, addr_t swpoff)
       return -1;
   }
 
-  SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
+  CLRBIT(*pte, PAGING_PTE_PRESENT_MASK);
   SETBIT(*pte, PAGING_PTE_SWAPPED_MASK);
   CLRBIT(*pte, PAGING_PTE_DIRTY_MASK); // Usually cleared on swap out
 

@@ -127,6 +127,7 @@ static void * ld_routine(void * args) {
 		while (current_time() < ld_processes.start_time[i]) {
 			next_slot(timer_id);
 		}
+		usleep(1000);
 #ifdef MM_PAGING
 		proc->mm = malloc(sizeof(struct mm_struct));
 		init_mm(proc->mm, proc);
@@ -139,7 +140,13 @@ static void * ld_routine(void * args) {
 		add_proc(proc);
 		free(ld_processes.path[i]);
 		i++;
-		next_slot(timer_id);
+
+		// Thêm cái này
+		if (i == num_processes || ld_processes.start_time[i] > current_time()) {
+			next_slot(timer_id);
+		}
+		//
+		//next_slot(timer_id); Xóa cái này
 	}
 	free(ld_processes.path);
 	free(ld_processes.start_time);
@@ -201,6 +208,32 @@ static void read_config(const char * path) {
 #endif
 		strcat(ld_processes.path[i], proc);
 	}
+	
+	//Thêm cái này
+    for (int k = 0; k < num_processes - 1; k++) {
+        for (int j = k + 1; j < num_processes; j++) {
+            if (ld_processes.start_time[k] > ld_processes.start_time[j]) {
+                // 1. Swap Start Time
+                unsigned long temp_time = ld_processes.start_time[k];
+                ld_processes.start_time[k] = ld_processes.start_time[j];
+                ld_processes.start_time[j] = temp_time;
+                // 2. Swap Path (Con trỏ chuỗi)
+                char * temp_path = ld_processes.path[k];
+                ld_processes.path[k] = ld_processes.path[j];
+                ld_processes.path[j] = temp_path;
+#ifdef MLQ_SCHED
+                // 3. Swap Priority (Nếu dùng chế độ MLQ)
+                unsigned long temp_prio = ld_processes.prio[k];
+                ld_processes.prio[k] = ld_processes.prio[j];
+                ld_processes.prio[j] = temp_prio;
+#endif
+            }
+        }
+    }
+	//
+
+
+
 }
 
 int main(int argc, char * argv[]) {
@@ -280,6 +313,3 @@ int main(int argc, char * argv[]) {
 	return 0;
 
 }
-
-
-
