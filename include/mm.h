@@ -71,6 +71,7 @@
 /* Value operators */
 #define SETBIT(v,mask) (v=v|mask)
 #define CLRBIT(v,mask) (v=v&~mask)
+#define GETBIT(v, mask) ((v) & (mask))
 
 #define SETVAL(v,value,mask,offst) (v=(v&~mask)|((value<<offst)&mask))
 #define GETVAL(v,mask,offst) ((v&mask)>>offst)
