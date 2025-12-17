@@ -280,6 +280,11 @@ int main(int argc, char * argv[]) {
 	/* In Paging mode, it needs passing the system mem to each PCB through loader*/
 	struct mmpaging_ld_args *mm_ld_args = malloc(sizeof(struct mmpaging_ld_args));
 
+	if (os.mm == NULL) {
+        os.mm = malloc(sizeof(struct mm_struct));
+        init_mm(os.mm, NULL); // Khởi tạo MM cho Kernel
+    }
+
 	mm_ld_args->timer_id = ld_event;
 	mm_ld_args->mram = (struct memphy_struct *) &mram;
 	mm_ld_args->mswp = (struct memphy_struct**) &mswp;

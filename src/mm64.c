@@ -50,8 +50,10 @@ int init_pte(addr_t *pte,
 {
   if (pre != 0) {
     if (swp == 0) { // Non swap ~ page online
-      if (fpn == 0)
+      if (fpn == 0) {
+        printf("Invalid setting\n");
         return -1;  // Invalid setting
+      }
 
       /* Valid setting with FPN */
       SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
@@ -163,11 +165,11 @@ static addr_t *__get_pte_ptr(struct mm_struct *mm, addr_t pgn, int alloc) {
 /*
  * pte_set_swap - Set PTE entry for swapped page
  */
-int pte_set_swap(struct pcb_t *caller, addr_t pgn, int swptyp, addr_t swpoff)
+int pte_set_swap(struct pcb_t *owner, addr_t pgn, int swptyp, addr_t swpoff)
 {
   pthread_mutex_lock(&mm_lock);
   
-  addr_t *pte = __get_pte_ptr(caller->mm, pgn, 1);
+  addr_t *pte = __get_pte_ptr(owner->mm, pgn, 1);
   
   if (pte == NULL) {
       pthread_mutex_unlock(&mm_lock);
@@ -175,7 +177,7 @@ int pte_set_swap(struct pcb_t *caller, addr_t pgn, int swptyp, addr_t swpoff)
   }
 
   printf(">>> pte_set_swap: PID=%d, pgn=%lu -> SWAP(fpn=%lu)\n", 
-         caller->pid, pgn, swpoff);
+         owner->pid, pgn, swpoff);
   
   SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
   SETBIT(*pte, PAGING_PTE_SWAPPED_MASK);
@@ -194,11 +196,11 @@ int pte_set_swap(struct pcb_t *caller, addr_t pgn, int swptyp, addr_t swpoff)
  * pte_set_fpn - Set PTE entry for on-line page
  * [cite: 522]
  */
-int pte_set_fpn(struct pcb_t *caller, addr_t pgn, addr_t fpn)
+int pte_set_fpn(struct pcb_t *owner, addr_t pgn, addr_t fpn)
 {
   pthread_mutex_lock(&mm_lock);
 
-  addr_t *pte = __get_pte_ptr(caller->mm, pgn, 1);
+  addr_t *pte = __get_pte_ptr(owner->mm, pgn, 1);
 
   if (pte == NULL) {
       pthread_mutex_unlock(&mm_lock);
@@ -206,7 +208,7 @@ int pte_set_fpn(struct pcb_t *caller, addr_t pgn, addr_t fpn)
   }
 
   printf(">>> pte_set_fpn: PID=%d, pgn=%lu -> RAM(fpn=%lu)\n", 
-         caller->pid, pgn, fpn);
+         owner->pid, pgn, fpn);
   
   SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
   CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
@@ -291,7 +293,7 @@ addr_t vmap_page_range(struct pcb_t *caller,
       pte_set_fpn(caller, pgn + pgit, fpit->fpn);
       
       // Tracking for FIFO replacement (enlisting)
-      enlist_pgn_node(&caller->mm->fifo_pgn, pgn + pgit);
+      enlist_pgn_node(&caller->krnl->mm->fifo_pgn, pgn + pgit, caller);
 
       fpit = fpit->fp_next;
   }
@@ -342,9 +344,10 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
       addr_t vicpgn, vicfpn, swpfpn;
       uint32_t vicpte;
       struct sc_regs regs;
+      struct pcb_t *vic_owner;
 
       // Find a victim page to swap out
-      if (find_victim_page(caller->mm, &vicpgn) == -1) {
+      if (find_victim_page(caller->krnl->mm, &vicpgn, &vic_owner) == -1) {
         printf("ERROR: Cannot find victim page in alloc_pages_range\n");
         free(newfp_str);
         
@@ -357,10 +360,10 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
         return -1;
       }
 
-      vicpte = pte_get_entry(caller, vicpgn);
+      vicpte = pte_get_entry(vic_owner, vicpgn);
       vicfpn = PAGING_FPN(vicpte);
-      printf("Selected VICTIM: pgn=%lu, fpn=%lu, pte=0x%08x\n", 
-             vicpgn, vicfpn, vicpte);
+      printf("Selected VICTIM: PID=%d, pgn=%lu, fpn=%lu, pte=0x%08x\n",
+            vic_owner->pid, vicpgn, vicfpn, vicpte);
 
       // Get a free frame in SWAP
       if (MEMPHY_get_freefp(caller->krnl->active_mswp, &swpfpn) == -1) {
@@ -387,9 +390,9 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
       syscall(caller->krnl, caller->pid, 17, &regs);
 
       // Update victim PTE to point to SWAP
-      pte_set_swap(caller, vicpgn, 0, swpfpn);
-      printf("Updated VICTIM PTE (pgn=%lu) to point to SWAP(%lu)\n", 
-             vicpgn, swpfpn);
+      pte_set_swap(vic_owner, vicpgn, 0, swpfpn);
+      printf("Updated VICTIM PTE (PID=%d, pgn=%lu) to point to SWAP(%lu)\n",
+            vic_owner->pid, vicpgn, swpfpn);
 
       // Now we can use the victim's frame for the new page
       ret_fpn = vicfpn;
@@ -514,11 +517,12 @@ int enlist_vm_rg_node(struct vm_rg_struct **rglist, struct vm_rg_struct *rgnode)
   return 0;
 }
 
-int enlist_pgn_node(struct pgn_t **plist, addr_t pgn)
+int enlist_pgn_node(struct pgn_t **plist, addr_t pgn, struct pcb_t *caller)
 {
   struct pgn_t *pnode = malloc(sizeof(struct pgn_t));
 
   pnode->pgn = pgn;
+  pnode->owner = caller;
   pnode->pg_next = *plist;
   *plist = pnode;
   printf("===== Add FIFO ====\n");
@@ -581,7 +585,7 @@ int print_list_pgn(struct pgn_t *ip)
   printf("\n");
   while (ip != NULL)
   {
-    printf("va[%ld]-\n", ip->pgn);
+    printf("va[%ld]\n", ip->pgn);
     ip = ip->pg_next;
   }
   printf("\n");
@@ -592,6 +596,7 @@ int print_list_pgn(struct pgn_t *ip)
 void print_pgtbl_recursive(addr_t *table, int level, addr_t current_prefix) {
     if (table == NULL) return;
     int i;
+    int count = 0;
     for (i = 0; i < 512; i++) {
         if (table[i] == 0) continue;
 
@@ -602,11 +607,13 @@ void print_pgtbl_recursive(addr_t *table, int level, addr_t current_prefix) {
                     PAGING_FPN(table[i]),
                     PAGING_PTE_GET_PRESENT(table[i]),
                     PAGING_PTE_GET_SWAPPED(table[i]));
+              ++count;
         } else {
              // Intermediate levels, table[i] is pointer to next table
              print_pgtbl_recursive((addr_t *)table[i], level - 1, (current_prefix << 9) | i);
         }
     }
+    if (level == 1) printf("Count: %d\n", count);
 }
 
 int print_pgtbl(struct pcb_t *caller, addr_t start, addr_t end)
