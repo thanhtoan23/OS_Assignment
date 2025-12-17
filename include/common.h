@@ -65,6 +65,8 @@ struct inst_t
 	arg_t arg_1;
 	arg_t arg_2;
 	arg_t arg_3;
+	arg_t arg_4;
+	arg_t arg_5;
 };
 
 struct code_seg_t

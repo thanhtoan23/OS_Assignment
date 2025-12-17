@@ -159,13 +159,11 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
 {
   pthread_mutex_lock(&mmvm_lock);
   
-  printf("[FREE] PID=%d, vmaid=%d, rgid=%d\n", caller->pid, vmaid, rgid);
+  printf("[FREE LAZY] PID=%d, vmaid=%d, rgid=%d\n", caller->pid, vmaid, rgid);
 
   /* 1. Validate region ID */
-  if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ)
-  {
-    printf("ERROR: Invalid rgid %d (must be 0-%d)\n", 
-           rgid, PAGING_MAX_SYMTBL_SZ-1);
+  if (rgid < 0 || rgid >= PAGING_MAX_SYMTBL_SZ) {
+    printf("ERROR: Invalid rgid %d\n", rgid);
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
@@ -173,104 +171,54 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
   /* 2. Get region from symbol table */
   struct vm_rg_struct *rgnode = &caller->mm->symrgtbl[rgid];
   
-  printf("  Region info: start=%lu, end=%lu, size=%lu bytes\n",
-         rgnode->rg_start, rgnode->rg_end, 
-         rgnode->rg_end - rgnode->rg_start);
-
-  /* 3. Check if region is already freed or not allocated */
-  if (rgnode->rg_start == 0 && rgnode->rg_end == 0)
-  {
-    printf("  WARNING: Region %d is already freed or never allocated\n", rgid);
+  /* 3. Check if already freed */
+  if (rgnode->rg_start == 0 && rgnode->rg_end == 0) {
+    printf("WARNING: Region %d already freed\n", rgid);
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
 
-  /* 4. LAZY FREE: Mark pages as available for reuse without clearing physical frames */
   addr_t start_addr = rgnode->rg_start;
   addr_t end_addr = rgnode->rg_end;
   
   if (start_addr >= end_addr) {
-    printf("  ERROR: Invalid region (start >= end)\n");
+    printf("ERROR: Invalid region (start >= end)\n");
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
 
-  /* 5. Invalidate PTE entries for all pages in this region (optional but good practice) */
-  addr_t current_addr = start_addr;
-  while (current_addr < end_addr) {
-    addr_t pgn = PAGING64_PGN(current_addr);
-    uint32_t pte = pte_get_entry(caller, pgn);
-    
-    if (pte != 0) {
-      /* For LAZY FREE: We don't free physical frames, but we can clear PRESENT bit
-       * to ensure these pages are not accessible anymore */
-      if (PAGING_PAGE_PRESENT(pte)) {
-        // Keep frame in RAM but mark as not present
-        printf("  Marking page pgn=%lu as not present (frame fpn=%u kept in RAM)\n",
-               pgn, PAGING_FPN(pte));
-        
-        // Clear PRESENT bit but keep other info for possible future use
-        CLRBIT(pte, PAGING_PTE_PRESENT_MASK);
-        pte_set_entry(caller, pgn, pte);
-      } else if (pte & PAGING_PTE_SWAPPED_MASK) {
-        // Page in SWAP - leave it there, will be reclaimed when process ends
-        printf("  Page pgn=%lu remains in SWAP (swp_fpn=%u)\n",
-               pgn, PAGING_SWP(pte));
-      }
-    }
-    
-    current_addr += PAGING64_PAGESZ;
-  }
-
-  /* 6. Create free region node for vm_freerg_list */
+  /* 4. Create free region node */
   struct vm_rg_struct *freerg_node = malloc(sizeof(struct vm_rg_struct));
   if (!freerg_node) {
-    printf("  ERROR: Failed to allocate memory for free region node\n");
+    printf("ERROR: malloc failed\n");
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
   
-  /* Copy region info */
-  freerg_node->rg_start = rgnode->rg_start;
-  freerg_node->rg_end = rgnode->rg_end;
+  freerg_node->rg_start = start_addr;
+  freerg_node->rg_end = end_addr;
   freerg_node->rg_next = NULL;
 
-  /* 7. Reset the region in symbol table */
+  /* 5. Reset symbol table entry */
   rgnode->rg_start = 0;
   rgnode->rg_end = 0;
   rgnode->rg_next = NULL;
 
-  /* 8. Add to free region list */
+  /* 6. Add to free list */
   struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, vmaid);
   if (!cur_vma) {
-    printf("  ERROR: Cannot find vma %d\n", vmaid);
+    printf("ERROR: Cannot find vma %d\n", vmaid);
     free(freerg_node);
     pthread_mutex_unlock(&mmvm_lock);
     return -1;
   }
 
-  /* Insert at beginning of free list (LIFO - simpler and faster) */
+  /* Add to head of free list (simple LIFO) */
   freerg_node->rg_next = cur_vma->vm_freerg_list;
   cur_vma->vm_freerg_list = freerg_node;
 
-  printf("  Successfully freed region %d [%lu-%lu] (added to free list)\n",
-         rgid, freerg_node->rg_start, freerg_node->rg_end);
-
-  /* 9. Debug: Print free region list */
-#ifdef DEBUG_FREE
-  printf("  Current free region list for vmaid %d:\n", vmaid);
-  struct vm_rg_struct *temp = cur_vma->vm_freerg_list;
-  int count = 0;
-  while (temp) {
-    printf("    [%d] [%lu -> %lu] (size: %lu)\n", 
-           count++, temp->rg_start, temp->rg_end,
-           temp->rg_end - temp->rg_start);
-    temp = temp->rg_next;
-  }
-  if (count == 0) {
-    printf("    (empty)\n");
-  }
-#endif
+  printf("  Freed region [%lu-%lu] (size=%lu). Physical frames NOT freed (LAZY).\n",
+         start_addr, end_addr, end_addr - start_addr);
 
   pthread_mutex_unlock(&mmvm_lock);
   return 0;
@@ -372,6 +320,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
                 regs.a1 = SYSMEM_SWP_OP;
                 regs.a2 = old_swpfpn;
                 regs.a3 = tgtfpn;
+                regs.a4 = 1;
                 syscall(caller->krnl, caller->pid, 17, &regs); 
                 
                 MEMPHY_put_freefp(caller->krnl->active_mswp, old_swpfpn);
@@ -418,6 +367,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
             regs.a1 = SYSMEM_SWP_OP;
             regs.a2 = vicfpn;
             regs.a3 = swpfpn;
+            regs.a4 = 0;
             syscall(caller->krnl, caller->pid, 17, &regs);
 
             // Cập nhật PTE của NẠN NHÂN (vic_owner)
@@ -436,6 +386,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
                 regs.a1 = SYSMEM_SWP_OP;
                 regs.a2 = old_swpfpn;
                 regs.a3 = tgtfpn;
+                regs.a4 = 1;
                 syscall(caller->krnl, caller->pid, 17, &regs); 
 
                 MEMPHY_put_freefp(caller->krnl->active_mswp, old_swpfpn);
@@ -493,7 +444,10 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
                 }
 
                 // Thực hiện Swap Out nạn nhân
-                regs.a1 = SYSMEM_SWP_OP; regs.a2 = vicfpn; regs.a3 = swpfpn;
+                regs.a1 = SYSMEM_SWP_OP; 
+                regs.a2 = vicfpn; 
+                regs.a3 = swpfpn;
+                regs.a4 = 0;
                 syscall(caller->krnl, caller->pid, 17, &regs);
 
                 // Cập nhật PTE của nạn nhân
@@ -505,6 +459,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
             regs.a1 = SYSMEM_SWP_OP;
             regs.a2 = old_swpfpn;
             regs.a3 = tgtfpn;
+            regs.a4 = 1;
             syscall(caller->krnl, caller->pid, 17, &regs);
 
             // 3. Trả lại slot Swap cũ và cập nhật PTE cho tiến trình hiện tại

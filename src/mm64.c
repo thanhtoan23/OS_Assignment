@@ -387,6 +387,7 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
       regs.a1 = SYSMEM_SWP_OP;
       regs.a2 = vicfpn;
       regs.a3 = swpfpn;
+      regs.a4 = 0;
       syscall(caller->krnl, caller->pid, 17, &regs);
 
       // Update victim PTE to point to SWAP
@@ -443,14 +444,24 @@ int __swap_cp_page(struct memphy_struct *mpsrc, addr_t srcfpn,
                    struct memphy_struct *mpdst, addr_t dstfpn, struct pcb_t *caller)
 {
   printf("=== SWAP OPERATION ===\n");
-  printf("Copying from %s(fpn=%lu) to %s(fpn=%lu)\n",
-         (mpsrc == caller->krnl->mram) ? "RAM" : "SWAP",
-         srcfpn,
-         (mpdst == caller->krnl->mram) ? "RAM" : "SWAP",
-         dstfpn);
+  
+  /* XÁC ĐỊNH ĐÚNG LOẠI SWAP */
+  int is_swap_out = (mpsrc == caller->krnl->mram && mpdst == caller->krnl->active_mswp);
+  int is_swap_in = (mpsrc == caller->krnl->active_mswp && mpdst == caller->krnl->mram);
+  
+  if (is_swap_out) {
+    printf("SWAP OUT: RAM(fpn=%lu) -> SWAP(fpn=%lu)\n", srcfpn, dstfpn);
+  } else if (is_swap_in) {
+    printf("SWAP IN: SWAP(fpn=%lu) -> RAM(fpn=%lu)\n", srcfpn, dstfpn);
+  } else {
+    printf("UNKNOWN SWAP DIRECTION: src=%s, dst=%s\n",
+           (mpsrc == caller->krnl->mram) ? "RAM" : "SWAP",
+           (mpdst == caller->krnl->mram) ? "RAM" : "SWAP");
+  }
   
   addr_t cellidx;
   addr_t addrsrc, addrdst;
+
   for (cellidx = 0; cellidx < PAGING64_PAGESZ; cellidx++)
   {
     addrsrc = srcfpn * PAGING64_PAGESZ + cellidx;

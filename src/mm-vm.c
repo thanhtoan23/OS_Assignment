@@ -48,9 +48,23 @@ struct vm_area_struct *get_vma_by_num(struct mm_struct *mm, int vmaid)
   return pvma;
 }
 
-int __mm_swap_page(struct pcb_t *caller, addr_t vicfpn , addr_t swpfpn)
+/* __mm_swap_page - generic swap function that can handle both directions
+ * @caller: caller process
+ * @src_fpn: source frame number
+ * @dst_fpn: destination frame number
+ * @direction: 0 = RAM->SWAP (swap out), 1 = SWAP->RAM (swap in)
+ */
+int __mm_swap_page(struct pcb_t *caller, addr_t src_fpn, addr_t dst_fpn, int direction)
 {
-    __swap_cp_page(caller->krnl->mram, vicfpn, caller->krnl->active_mswp, swpfpn, caller); // Gọi hàm swap từ libmem 
+    if (direction == 0) { // SWAP OUT: RAM -> SWAP
+        __swap_cp_page(caller->krnl->mram, src_fpn, 
+                       caller->krnl->active_mswp, dst_fpn, caller);
+        printf("SYSCALL: Swap OUT completed (RAM:%lu -> SWAP:%lu)\n", src_fpn, dst_fpn);
+    } else { // SWAP IN: SWAP -> RAM
+        __swap_cp_page(caller->krnl->active_mswp, src_fpn,
+                       caller->krnl->mram, dst_fpn, caller);
+        printf("SYSCALL: Swap IN completed (SWAP:%lu -> RAM:%lu)\n", src_fpn, dst_fpn);
+    }
     return 0;
 }
 

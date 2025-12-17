@@ -103,7 +103,7 @@ switch (ins.opcode)
 #endif
 		break;
 	case SYSCALL:
-		stat = libsyscall(proc, ins.arg_0, ins.arg_1, ins.arg_2, ins.arg_3);
+		stat = libsyscall(proc, ins.arg_0, ins.arg_1, ins.arg_2, ins.arg_3, ins.arg_4, ins.arg_5);
 		break;
 	default:
 		stat = 1;

@@ -74,10 +74,10 @@ int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
             inc_vma_limit(caller, regs->a2, regs->a3);
             break;
    case SYSMEM_SWP_OP:
-            __mm_swap_page(caller, regs->a2, regs->a3);
+            /* regs->a2 = source fpn, regs->a3 = dest fpn, regs->a4 = direction */
+            __mm_swap_page(caller, regs->a2, regs->a3, regs->a4);
             break;
    case SYSMEM_IO_READ:
-            printf("READING..................1\n");
             MEMPHY_read(krnl->mram, regs->a2, &value);
             regs->a3 = value;
             printf("DEBUG CHECK READ: PID=%d read form Addr=%ld -> Got Value=%d\n", 
