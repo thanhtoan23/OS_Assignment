@@ -193,14 +193,28 @@ int MEMPHY_dump(struct memphy_struct *mp)
     *     for tracing the memory content
     */
    printf("===== PHYSICAL MEMORY DUMP =====\n");
-   printf("masz : %d \n",mp->maxsz);
-   uint32_t* word_storage = (uint32_t*)mp->storage;
+   printf("Memory size: %d bytes\n", mp->maxsz);
+   printf("Random access: %s\n", mp->rdmflg ? "YES" : "NO");
+   
    int i;
-   for (i = 0; i < mp->maxsz / 4; i++){
-      if (word_storage[i] != 0)
-      printf("BYTE %08x: %d\n", i * 4, word_storage[i]);
-	}
-   printf("===== PHYSICAL MEMORY END-DUMP =====\n");
+   int non_zero_found = 0;
+   
+   // Dump theo từng byte
+   for (i = 0; i < mp->maxsz; i++) {
+       if (mp->storage[i] != 0) {
+           printf("Address 0x%08x (byte %d): 0x%02x (%d decimal)\n", 
+                  i, i, (unsigned char)mp->storage[i], (unsigned char)mp->storage[i]);
+           non_zero_found++;
+       }
+   }
+   
+   if (non_zero_found == 0) {
+       printf("All memory is zero (empty)\n");
+   } else {
+       printf("Found %d non-zero bytes\n", non_zero_found);
+   }
+   
+   printf("===== END PHYSICAL MEMORY DUMP =====\n");
    
    return 0;
 }

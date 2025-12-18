@@ -1,0 +1,208 @@
+Dung luong Ram: 4096 
+Time slot 0
+ld_routine
+Time slot   1
+	Loaded a process at input/proc/sc2, PID: 1 PRIO: 15
+	CPU 0: Dispatched process  1
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 1
+Page num 0 -> Address: 0 
+>>> pte_set_fpn: PID=1, pgn=0 -> RAM(fpn=0), dirty=1
+New PTE value: 0xb0000000 (dirty=1)
+===== Added to FIFO: pgn=0 (PID=1) =====
+print_list_pgn: 
+  va[0] (PID=1)
+Total: 1 pages
+
+BEST FIT search for size=4096 in vma 0:
+  Checking region [0-4096] (size=4096)
+    -> New best fit (size=4096)
+BEST FIT selected: [0-4096] (size=4096)
+  Region fully used, removing from free list
+BEST FIT allocated: [0-4096] (size=4096)
+liballoc:234
+Page Table Dump for PID 1:
+print_pgtbl:
+ PDG=0000780fa8000bd0 P4G=0000780fa8001be0 PUD=0000780fa8002bf0 PMD=0000780fa8003c00
+  00000: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 1
+	Loaded a process at input/proc/sc2, PID: 2 PRIO: 15
+	Loaded a process at input/proc/sc2, PID: 3 PRIO: 15
+Time slot   2
+	CPU 1: Dispatched process  2
+No free regions available in vma 0
+WRITE: pid: 1
+ALLOC PAGE RANGE, PID: 2
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 1) ===
+Checking pgn=0 (PID=1): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+All pages had ref=1, taking first page as victim
+Selected victim: pgn=0 (PID=1)
+Selected VICTIM: PID=1, pgn=0, fpn=0, pte=0x90000000, dirty=1
+ALL SWAP DEVICES ARE FULL!\nERROR: Cannot allocate pages - swap full and insufficient clean pages
+Out of memory
+BEST FIT search for size=4096 in vma 0:
+  Checking region [0-4096] (size=4096)
+    -> New best fit (size=4096)
+BEST FIT selected: [0-4096] (size=4096)
+  Region fully used, removing from free list
+BEST FIT allocated: [0-4096] (size=4096)
+liballoc:234
+Page Table Dump for PID 2:
+Page table not initialized.
+WRITE: pid: 1, addr: 4112, pgn: 1, off: 16
+=== pg_getpage DEBUG ===
+PID: 1, Request page: pgn=1, old_pte=0x00000000
+Page Present? NO
+Page Swapped? NO
+Page Dirty? NO
+>>> PAGE FAULT TRIGGERED! <<<
+Page not in SWAP (first access)
+RAM FULL! Need to find VICTIM for SWAP OUT
+ERROR: No pages in clock list
+ERROR: Cannot find victim page
+libwrite:725
+Page Table Dump for PID 1:
+print_pgtbl:
+ PDG=0000780fa8000bd0 P4G=0000780fa8001be0 PUD=0000780fa8002bf0 PMD=0000780fa8003c00
+  00000: [90000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+Count: 1
+===== PHYSICAL MEMORY DUMP =====
+masz : 4096 
+===== PHYSICAL MEMORY END-DUMP =====
+Time slot   3
+WRITE: pid: 2
+WRITE: pid: 2, addr: 4112, pgn: 1, off: 16
+=== pg_getpage DEBUG ===
+PID: 2, Request page: pgn=1, old_pte=0xffffffff
+Page Present? YES
+Page Swapped? YES
+Page Dirty? YES
+Page is present but currently SWAPPED OUT. Triggering Swap-In...
+ERROR: No pages in clock list
+ERROR: Cannot find victim page
+libwrite:725
+Page Table Dump for PID 2:
+Page table not initialized.
+===== PHYSICAL MEMORY DUMP =====
+masz : 4096 
+===== PHYSICAL MEMORY END-DUMP =====
+	CPU 0: Put process  1 to run queue
+	CPU 0: Dispatched process  3
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 3
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+ERROR: No pages in clock list
+ERROR: Cannot find victim page in alloc_pages_range
+Page num 0 -> Address: 0 
+BEST FIT search for size=4096 in vma 0:
+  Checking region [0-4096] (size=4096)
+    -> New best fit (size=4096)
+BEST FIT selected: [0-4096] (size=4096)
+  Region fully used, removing from free list
+BEST FIT allocated: [0-4096] (size=4096)
+liballoc:234
+Page Table Dump for PID 3:
+Page table not initialized.
+Time slot   4
+	CPU 1: Put process  2 to run queue
+	CPU 1: Dispatched process  1
+WRITE: pid: 3
+WRITE: pid: 3, addr: 4112, pgn: 1, off: 16
+=== pg_getpage DEBUG ===
+PID: 3, Request page: pgn=1, old_pte=0xffffffff
+Page Present? YES
+Page Swapped? YES
+Page Dirty? YES
+Page is present but currently SWAPPED OUT. Triggering Swap-In...
+ERROR: No pages in clock list
+ERROR: Cannot find victim page
+libwrite:725
+Page Table Dump for PID 3:
+Page table not initialized.
+===== PHYSICAL MEMORY DUMP =====
+masz : 4096 
+===== PHYSICAL MEMORY END-DUMP =====
+Time slot   5
+	CPU 0: Put process  3 to run queue
+	CPU 0: Dispatched process  2
+READ: pid: 1
+READ: pid: 1, addr: 4112, pgn: 1, off: 16
+=== pg_getpage DEBUG ===
+PID: 1, Request page: pgn=1, old_pte=0x00000000
+Page Present? NO
+Page Swapped? NO
+Page Dirty? NO
+>>> PAGE FAULT TRIGGERED! <<<
+Page not in SWAP (first access)
+RAM FULL! Need to find VICTIM for SWAP OUT
+ERROR: No pages in clock list
+ERROR: Cannot find victim page
+libread:674
+Page Table Dump for PID 1:
+print_pgtbl:
+ PDG=0000780fa8000bd0 P4G=0000780fa8001be0 PUD=0000780fa8002bf0 PMD=0000780fa8003c00
+  00000: [90000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+Count: 1
+Time slot   6
+	CPU 1: Put process  1 to run queue
+	CPU 1: Dispatched process  3
+READ: pid: 2
+READ: pid: 2, addr: 4112, pgn: 1, off: 16
+=== pg_getpage DEBUG ===
+PID: 2, Request page: pgn=1, old_pte=0xffffffff
+Page Present? YES
+Page Swapped? YES
+Page Dirty? YES
+Page is present but currently SWAPPED OUT. Triggering Swap-In...
+ERROR: No pages in clock list
+ERROR: Cannot find victim page
+libread:674
+Page Table Dump for PID 2:
+Page table not initialized.
+Time slot   7
+READ: pid: 3
+READ: pid: 3, addr: 4112, pgn: 1, off: 16
+=== pg_getpage DEBUG ===
+PID: 3, Request page: pgn=1, old_pte=0xffffffff
+Page Present? YES
+Page Swapped? YES
+Page Dirty? YES
+Page is present but currently SWAPPED OUT. Triggering Swap-In...
+ERROR: No pages in clock list
+ERROR: Cannot find victim page
+libread:674
+Page Table Dump for PID 3:
+Page table not initialized.
+	CPU 0: Put process  2 to run queue
+	CPU 0: Dispatched process  1
+[FREE LAZY] PID=1, vmaid=0, rgid=2
+  Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 1:
+print_pgtbl:
+ PDG=0000780fa8000bd0 P4G=0000780fa8001be0 PUD=0000780fa8002bf0 PMD=0000780fa8003c00
+  00000: [90000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+Count: 1
+Time slot   8
+	CPU 1: Put process  3 to run queue
+	CPU 1: Dispatched process  2
+[FREE LAZY] PID=2, vmaid=0, rgid=2
+  Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 2:
+Page table not initialized.
+	CPU 0: Processed  1 has finished
+	CPU 0: Dispatched process  3
+[FREE LAZY] PID=3, vmaid=0, rgid=2
+  Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 3:
+Page table not initialized.
+Time slot   9
+	CPU 1: Processed  2 has finished
+	CPU 0: Processed  3 has finished
+	CPU 1 stopped
+	CPU 0 stopped
