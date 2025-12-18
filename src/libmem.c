@@ -800,113 +800,113 @@ int free_pcb_memph(struct pcb_t *caller)
  */
 int find_victim_page(struct mm_struct *mm, addr_t *retpgn, struct pcb_t **ret_owner)
 {
-    static struct pgn_t *clock_hand = NULL; // Con trỏ đồng hồ (giữ trạng thái giữa các lần gọi)
-    struct pgn_t *prev = NULL;
+    static struct pgn_t *clock_hand = NULL;
     struct pgn_t *current;
     int found = 0;
     
-    /* Initialize clock hand if it's NULL */
     if (clock_hand == NULL) {
         clock_hand = mm->fifo_pgn;
     }
     
-    /* If no pages in the list */
     if (clock_hand == NULL) {
         printf("ERROR: No pages in clock list\n");
         return -1;
     }
     
-    /* Start from current clock hand position */
     current = clock_hand;
-    prev = NULL;
+    struct pgn_t *start = current;
     
-    printf("\n=== CLOCK Algorithm Searching ===\n");
-    printf("Starting from pgn=%lu\n", current->pgn);
+    printf("\n=== CLOCK Algorithm Searching (List length: ");
+    // Tính độ dài danh sách
+    int list_len = 0;
+    struct pgn_t *temp = mm->fifo_pgn;
+    while (temp != NULL) {
+        list_len++;
+        temp = temp->pg_next;
+    }
+    printf("%d) ===\n", list_len);
     
-    /* Traverse the circular list (simulated using FIFO list) */
     do {
-        /* Get the PTE for this page */
         uint32_t pte = pte_get_entry(current->owner, current->pgn);
         int present = PAGING_PTE_GET_PRESENT(pte);
-        int referenced = PAGING_PTE_GET_REFERENCED(pte); // Need to add REFERENCED bit
+        int referenced = PAGING_PTE_GET_REFERENCED(pte);
         
         printf("Checking pgn=%lu (PID=%d): present=%d, referenced=%d\n",
                current->pgn, current->owner->pid, present, referenced);
         
-        /* Skip if page is not present in RAM */
         if (!present) {
-            printf("  -> Page not in RAM, skipping\n");
-            goto next;
+            printf("  -> Page not in RAM, removing from list\n");
+            // Xóa node này khỏi danh sách
+            struct pgn_t *prev = NULL;
+            struct pgn_t *iter = mm->fifo_pgn;
+            while (iter != NULL && iter != current) {
+                prev = iter;
+                iter = iter->pg_next;
+            }
+            if (prev == NULL) {
+                mm->fifo_pgn = current->pg_next;
+            } else {
+                prev->pg_next = current->pg_next;
+            }
+            struct pgn_t *next = current->pg_next;
+            free(current);
+            current = (next != NULL) ? next : mm->fifo_pgn;
+            continue;
         }
         
-        /* Check reference bit */
         if (referenced == 0) {
-            /* Found victim! */
+            // Found victim
             *retpgn = current->pgn;
             *ret_owner = current->owner;
             found = 1;
             printf("  -> Selected as victim (ref=0)\n");
             
-            /* Remove from list */
-            if (prev == NULL) {
-                /* Current is head of list */
-                mm->fifo_pgn = current->pg_next;
-            } else {
-                prev->pg_next = current->pg_next;
+            // Xóa victim khỏi danh sách
+            struct pgn_t *prev = NULL;
+            struct pgn_t *iter = mm->fifo_pgn;
+            while (iter != NULL && iter != current) {
+                prev = iter;
+                iter = iter->pg_next;
             }
             
-            /* Move clock hand to next page */
-            clock_hand = (current->pg_next != NULL) ? current->pg_next : mm->fifo_pgn;
+            if (prev == NULL) {
+                mm->fifo_pgn = current->pg_next;
+                clock_hand = (current->pg_next != NULL) ? current->pg_next : mm->fifo_pgn;
+            } else {
+                prev->pg_next = current->pg_next;
+                clock_hand = (current->pg_next != NULL) ? current->pg_next : mm->fifo_pgn;
+            }
             
             free(current);
             break;
         } else {
-            /* Give second chance: clear reference bit */
             printf("  -> Giving second chance, clearing reference bit\n");
-            CLRBIT(pte, PAGING_PTE_REFERENCED_MASK); // Need to define this mask
+            CLRBIT(pte, PAGING_PTE_REFERENCED_MASK);
             pte_set_entry(current->owner, current->pgn, pte);
         }
         
-    next:
-        prev = current;
         current = current->pg_next;
-        
-        /* Wrap around if reached end */
         if (current == NULL) {
             current = mm->fifo_pgn;
-            prev = NULL;
         }
         
-    } while (current != clock_hand && !found);
+    } while (current != start && !found);
     
-    /* If we've gone full circle and all pages have ref=1, 
-       they've all been cleared to 0 now, so take the current one */
-    if (!found) {
-        printf("All pages had ref=1, taking current as victim\n");
-        *retpgn = clock_hand->pgn;
-        *ret_owner = clock_hand->owner;
+    if (!found && mm->fifo_pgn != NULL) {
+        printf("All pages had ref=1, taking first page as victim\n");
+        current = mm->fifo_pgn;
+        *retpgn = current->pgn;
+        *ret_owner = current->owner;
         
-        /* Remove from list */
-        if (mm->fifo_pgn == clock_hand) {
-            mm->fifo_pgn = clock_hand->pg_next;
-        } else {
-            /* Find previous node */
-            struct pgn_t *temp = mm->fifo_pgn;
-            while (temp->pg_next != clock_hand) {
-                temp = temp->pg_next;
-            }
-            temp->pg_next = clock_hand->pg_next;
-        }
-        
-        clock_hand = (clock_hand->pg_next != NULL) ? clock_hand->pg_next : mm->fifo_pgn;
+        mm->fifo_pgn = current->pg_next;
+        clock_hand = (current->pg_next != NULL) ? current->pg_next : mm->fifo_pgn;
         free(current);
         found = 1;
     }
     
-    printf("Selected victim: pgn=%lu (PID=%d)\n", *retpgn, (*ret_owner)->pid);
-    printf("New clock hand at: pgn=%lu\n", 
-           (clock_hand != NULL) ? clock_hand->pgn : 0);
-    printf("=== End CLOCK Search ===\n\n");
+    if (found) {
+        printf("Selected victim: pgn=%lu (PID=%d)\n", *retpgn, (*ret_owner)->pid);
+    }
     
     return found ? 0 : -1;
 }

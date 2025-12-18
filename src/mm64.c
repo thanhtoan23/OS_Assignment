@@ -600,17 +600,76 @@ int enlist_vm_rg_node(struct vm_rg_struct **rglist, struct vm_rg_struct *rgnode)
 
 int enlist_pgn_node(struct pgn_t **plist, addr_t pgn, struct pcb_t *caller)
 {
-  struct pgn_t *pnode = malloc(sizeof(struct pgn_t));
-
-  pnode->pgn = pgn;
-  pnode->owner = caller;
-  pnode->pg_next = *plist;
-  *plist = pnode;
-
-  printf("===== Add FIFO ====\n");
-  print_list_pgn(pnode);
-
-  return 0;
+    /* Kiểm tra đầu vào hợp lệ */
+    if (caller == NULL || caller->pid <= 0) {
+        printf("ERROR: Invalid caller (PID=%d) in enlist_pgn_node\n", 
+               caller ? caller->pid : -1);
+        return -1;
+    }
+    
+    if (pgn >= PAGING_MAX_PGN) {
+        printf("ERROR: Invalid page number %lu (max=%d)\n", pgn, PAGING_MAX_PGN);
+        return -1;
+    }
+    
+    /* KIỂM TRA TRÙNG LẶP: Đảm bảo page này chưa có trong danh sách */
+    struct pgn_t *existing = *plist;
+    while (existing != NULL) {
+        if (existing->owner == caller && existing->pgn == pgn) {
+            printf("WARNING: Page %lu (PID=%d) already exists in FIFO list, skipping\n", 
+                   pgn, caller->pid);
+            return 0; // Không thêm trùng, nhưng không phải lỗi
+        }
+        existing = existing->pg_next;
+    }
+    
+    /* Kiểm tra PTE để đảm bảo page thực sự tồn tại và hợp lệ */
+    uint32_t pte = pte_get_entry(caller, pgn);
+    if (pte == (uint32_t)-1) {
+        printf("WARNING: Cannot get PTE for pgn=%lu (PID=%d), page may not exist\n", 
+               pgn, caller->pid);
+        return -1;
+    }
+    
+    if (!PAGING_PTE_GET_PRESENT(pte)) {
+        printf("WARNING: Page %lu (PID=%d) is not present, not adding to FIFO\n", 
+               pgn, caller->pid);
+        return 0; // Không thêm page không present
+    }
+    
+    int is_swapped = PAGING_PTE_GET_SWAPPED(pte);
+    if (is_swapped) {
+        printf("WARNING: Page %lu (PID=%d) is swapped out, not adding to FIFO\n", 
+               pgn, caller->pid);
+        return 0; // Không thêm page đang ở swap
+    }
+    
+    /* Tạo node mới */
+    struct pgn_t *pnode = malloc(sizeof(struct pgn_t));
+    if (!pnode) {
+        printf("ERROR: malloc failed in enlist_pgn_node\n");
+        return -1;
+    }
+    
+    pnode->pgn = pgn;
+    pnode->owner = caller;
+    pnode->pg_next = NULL;
+    
+    /* Thêm vào CUỐI danh sách (FIFO đúng nghĩa) */
+    if (*plist == NULL) {
+        *plist = pnode;
+    } else {
+        struct pgn_t *last = *plist;
+        while (last->pg_next != NULL) {
+            last = last->pg_next;
+        }
+        last->pg_next = pnode;
+    }
+    
+    printf("===== Added to FIFO: pgn=%lu (PID=%d) =====\n", pgn, caller->pid);
+    print_list_pgn(*plist);
+    
+    return 0;
 }
 
 int print_list_fp(struct framephy_struct *ifp)
@@ -670,14 +729,21 @@ int print_list_vma(struct vm_area_struct *ivma)
 int print_list_pgn(struct pgn_t *ip)
 {
   printf("print_list_pgn: ");
-  if (ip == NULL) { printf("NULL list\n"); return -1; }
+  if (ip == NULL) { 
+    printf("NULL list\n"); 
+    return -1; 
+  }
   printf("\n");
 
-  while (ip != NULL)
+  struct pgn_t *curr = ip;
+  int count = 0;
+  while (curr != NULL)
   {
-    printf("va[%ld]\n", ip->pgn);
-    ip = ip->pg_next;
+    printf("  va[%ld] (PID=%d)\n", curr->pgn, curr->owner->pid);
+    curr = curr->pg_next;
+    count++;
   }
+  printf("Total: %d pages\n", count);
   printf("\n");
 
   return 0;
