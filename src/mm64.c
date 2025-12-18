@@ -50,10 +50,10 @@ int init_pte(addr_t *pte,
 {
   if (pre != 0) {
     if (swp == 0) { // Non swap ~ page online
-      if (fpn == 0) {
-        printf("Invalid setting\n");
-        return -1;  // Invalid setting
-      }
+      // if (fpn == 0) {
+      //   printf("Invalid setting\n");
+      //   return -1;  // Invalid setting
+      // }
 
       /* Valid setting with FPN */
       SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
@@ -222,48 +222,101 @@ int pte_set_fpn(struct pcb_t *owner, addr_t pgn, addr_t fpn)
 }
 
 /* Get PTE page table entry */
-uint32_t pte_get_entry(struct pcb_t *caller, addr_t pgn)
-{
+uint32_t pte_get_entry(struct pcb_t *caller, addr_t pgn) {
+  pthread_mutex_lock(&mm_lock);
   addr_t *pte_ptr = __get_pte_ptr(caller->mm, pgn, 0); // Do not alloc
-
   if (pte_ptr == NULL) {
-      return 0; // Page not present / invalid
+      pthread_mutex_unlock(&mm_lock);
+      return -1; // Page not present / invalid
   }
-  
+  pthread_mutex_unlock(&mm_lock);
   return (uint32_t)(*pte_ptr);
 }
 
 /* Set PTE page table entry */
-int pte_set_entry(struct pcb_t *caller, addr_t pgn, uint32_t pte_val)
-{
-    // Note: This overrides the entry directly. 
+int pte_set_entry(struct pcb_t *caller, addr_t pgn, uint32_t pte_val) {
+    // Note: This overrides the entry directly.
+    
     pthread_mutex_lock(&mm_lock);
     addr_t *pte_ptr = __get_pte_ptr(caller->mm, pgn, 1);
-    if (pte_ptr) {
+    if (pte_ptr == NULL) {
+      pthread_mutex_unlock(&mm_lock);
+      return -1; // Page not present / invalid
+    }
+    else {
         *pte_ptr = (addr_t)pte_val;
     }
     pthread_mutex_unlock(&mm_lock);
     return 0;
 }
 
-
 /*
- * vmap_pgd_memset - map a range of page at aligned address
- * [cite: 749, 750]
+ * vmap_pgd_memset - Map a range of pages at aligned address (DUMMY ALLOCATION)
+ * 
+ * @caller: Process requesting the mapping
+ * @addr: Starting virtual address (must be page-aligned)
+ * @pgnum: Number of pages to map
+ * 
+ * This function emulates page directory creation for sparse address spaces
+ * in 64-bit systems without actually allocating physical frames.
+ * It ensures that all necessary page table levels exist for the given
+ * virtual address range, but marks pages as NOT PRESENT (no physical frame).
+ * 
+ * Used for testing sparse memory usage in large 64-bit address spaces.
+ * 
+ * Return: 0 on success, -1 on error
  */
-int vmap_pgd_memset(struct pcb_t *caller, addr_t addr, int pgnum)
-{
-  /* Emulate page directory working without real allocation (for sparse testing) */
-  int i;
-  addr_t pgn_start = PAGING64_PGN(addr);
-  
-  for(i = 0; i < pgnum; i++) {
-      // Just ensure the directories exist
-      pthread_mutex_lock(&mm_lock);
-      __get_pte_ptr(caller->mm, pgn_start + i, 1);
-      pthread_mutex_unlock(&mm_lock);
-  }
-  return 0;
+int vmap_pgd_memset(struct pcb_t *caller, addr_t addr, int pgnum) {
+    if (caller == NULL || caller->mm == NULL) {
+        printf("ERROR: vmap_pgd_memset - Invalid caller or MM struct\n");
+        return -1;
+    }
+    
+    /* Ensure address is page-aligned */
+    if (addr % PAGING64_PAGESZ != 0) {
+        printf("ERROR: vmap_pgd_memset - Address 0x%lx not page-aligned\n", addr);
+        return -1;
+    }
+    
+    if (pgnum <= 0) {
+        printf("ERROR: vmap_pgd_memset - Invalid page count: %d\n", pgnum);
+        return -1;
+    }
+    
+    addr_t pgn_start = PAGING64_PGN(addr);
+    
+    printf("vmap_pgd_memset: PID=%d, addr=0x%lx, pages=%d (pgn_start=%lu)\n",
+           caller->pid, addr, pgnum, pgn_start);
+    
+    pthread_mutex_lock(&mm_lock);
+    
+    for (int i = 0; i < pgnum; i++) {
+        addr_t current_pgn = pgn_start + i;
+        
+        /* Get PTE pointer, creating directories if needed (alloc=1) */
+        addr_t *pte_ptr = __get_pte_ptr(caller->mm, current_pgn, 1);
+        if (pte_ptr == NULL) {
+            printf("ERROR: vmap_pgd_memset - Failed to create PTE for pgn=%lu\n", 
+                   current_pgn);
+            pthread_mutex_unlock(&mm_lock);
+            return -1;
+        }
+        
+        /* Ensure page is marked as NOT PRESENT (dummy allocation) */
+        /* Only directory structures exist, no actual frame mapping */
+        *pte_ptr = 0;  // Clear all bits including PRESENT bit
+        
+        /* Optional: Mark as special "dummy" page for tracking */
+        // SETVAL(*pte_ptr, DUMMY_PAGE_MARKER, ...);
+        
+        printf("  Page %d: pgn=%lu -> Dummy mapping (PTE=0x%08x)\n", 
+               i, current_pgn, (uint32_t)*pte_ptr);
+    }
+    
+    pthread_mutex_unlock(&mm_lock);
+    
+    printf("vmap_pgd_memset: Successfully created dummy mappings for %d pages\n", pgnum);
+    return 0;
 }
 
 /*

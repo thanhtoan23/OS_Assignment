@@ -492,19 +492,16 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
  *@value: value
  *
  */
-int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
+int pg_getval(struct mm_struct *mm, addr_t addr, BYTE *data, struct pcb_t *caller)
 {
-  printf("READING..................2\n");
   // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
   addr_t pgn = PAGING64_PGN(addr);        // Page number (phần cao của VA)
   addr_t off = PAGING64_OFFST(addr);      // Offset (phần thấp của VA)
   int fpn;                            // Frame number sẽ lấy từ pg_getpage
   
   // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
-  if (pg_getpage(mm, pgn, &fpn, caller) != 0) {
-    printf("111111111111111\n");
+  if (pg_getpage(mm, pgn, &fpn, caller) != 0)
     return -1; /* invalid page access */
-  }
 
   // BƯỚC 3: Tính địa chỉ vật lý (Physical Address)
   // PA = (FPN * PAGE_SIZE) + offset
@@ -532,7 +529,7 @@ int pg_getval(struct mm_struct *mm, int addr, BYTE *data, struct pcb_t *caller)
  *@value: value
  *
  */
-int pg_setval(struct mm_struct *mm, int addr, BYTE value, struct pcb_t *caller)
+int pg_setval(struct mm_struct *mm, addr_t addr, BYTE value, struct pcb_t *caller)
 {
   // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
   addr_t pgn = PAGING64_PGN(addr);        // Page number (phần cao của VA)

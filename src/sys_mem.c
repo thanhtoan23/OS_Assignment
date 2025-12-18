@@ -80,7 +80,7 @@ int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
    case SYSMEM_IO_READ:
             MEMPHY_read(krnl->mram, regs->a2, &value);
             regs->a3 = value;
-            printf("DEBUG CHECK READ: PID=%d read form Addr=%ld -> Got Value=%d\n", 
+            printf("DEBUG CHECK READ: PID=%d read from Addr=%ld -> Got Value=%d\n", 
                pid, regs->a2, value);
             break;
    case SYSMEM_IO_WRITE:
