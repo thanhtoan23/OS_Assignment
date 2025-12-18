@@ -1,0 +1,4 @@
+20 3
+alloc 10000 1
+syscall 17 5 12 10
+syscall 17 4 12 20

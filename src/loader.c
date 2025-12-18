@@ -92,11 +92,13 @@ struct pcb_t * load(const char * path) {
 			break;	
 		case SYSCALL:
 			fgets(buf, sizeof(buf), file);
-			sscanf(buf, "" FORMAT_ARG "" FORMAT_ARG "" FORMAT_ARG "" FORMAT_ARG "",
+			sscanf(buf, "" FORMAT_ARG "" FORMAT_ARG "" FORMAT_ARG "" FORMAT_ARG "" FORMAT_ARG ""FORMAT_ARG "",
 			           &proc->code->text[i].arg_0,
 			           &proc->code->text[i].arg_1,
 			           &proc->code->text[i].arg_2,
-			           &proc->code->text[i].arg_3
+			           &proc->code->text[i].arg_3,
+					   &proc->code->text[i].arg_4,
+			           &proc->code->text[i].arg_5
 			);
 			break;
 		default:

@@ -25,6 +25,11 @@
 int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
 {
    int memop = regs->a1;
+//    printf("Reg1 %d: \n", regs->a1);
+//    printf("Reg2 %d: \n", regs->a2);
+//    printf("Reg3 %d: \n", regs->a3);
+//    printf("Reg4 %d: \n", regs->a4);
+//    printf("Reg5 %d: \n", regs->a5);
    BYTE value;
    
    /* TODO THIS DUMMY CREATE EMPTY PROC TO AVOID COMPILER NOTIFY 
@@ -64,7 +69,6 @@ int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
     /* TODO Maching and marking the process */
     /* user process are not allowed to access directly pcb in kernel space of syscall */
     //....
-	
    switch (memop) {
    case SYSMEM_MAP_OP:
             /* Reserved process case*/
@@ -76,6 +80,7 @@ int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
    case SYSMEM_SWP_OP:
             /* a2: src_fpn, a3: dst_fpn, a4: direction, a5: swp_type */
             __mm_swap_page(caller, regs->a2, regs->a3, regs->a4, regs->a5);
+            printf("Co goi swap: \n");
             break;
    case SYSMEM_IO_READ:
             MEMPHY_read(krnl->mram, regs->a2, &value);
@@ -85,6 +90,10 @@ int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
             break;
    case SYSMEM_IO_WRITE:
             MEMPHY_write(krnl->mram, regs->a2, regs->a3);
+            printf("----------------------------------------------------\n");
+            printf("PhyAddres from SYSCALL WRITE: %lu \n",regs->a2);
+            printf("Value from SYSCALL WRITE: %d \n",regs->a3);
+            MEMPHY_dump(krnl->mram);
             break;
    default:
             printf("Memop code: %d\n", memop);
