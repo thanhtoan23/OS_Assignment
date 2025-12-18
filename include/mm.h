@@ -17,7 +17,7 @@
 /* PTE BIT */
 #define PAGING_PTE_PRESENT_MASK BIT(31) 
 #define PAGING_PTE_SWAPPED_MASK BIT(30)
-#define PAGING_PTE_RESERVE_MASK BIT(29)
+#define PAGING_PTE_REFERENCED_MASK BIT(29)
 #define PAGING_PTE_DIRTY_MASK BIT(28)
 #define PAGING_PTE_EMPTY01_MASK BIT(14)
 #define PAGING_PTE_EMPTY02_MASK BIT(13)
@@ -106,10 +106,10 @@
 #define PAGING_PTE_GET_SWAPPED(pte)   GETBIT((pte), PAGING_PTE_SWAPPED_MASK) ? 1 : 0
 
 /* Get dirty bit (bit 28) - nếu cần */
-#define PAGING_PTE_GET_DIRTY(pte)     GETBIT((pte), PAGING_PTE_DIRTY_MASK)
+#define PAGING_PTE_GET_DIRTY(pte)     GETBIT((pte), PAGING_PTE_DIRTY_MASK) ? 1 : 0
 
 /* Get reserve bit (bit 29) - nếu cần */
-#define PAGING_PTE_GET_RESERVE(pte)   GETBIT((pte), PAGING_PTE_RESERVE_MASK)
+#define PAGING_PTE_GET_REFERENCED(pte)   GETBIT((pte), PAGING_PTE_REFERENCED_MASK) ? 1 : 0
 
 /* Get swap type bits (bits 0-4) - chỉ khi swapped = 1 */
 #define PAGING_PTE_GET_SWPTYP(pte)    GETVAL((pte), PAGING_PTE_SWPTYP_MASK, PAGING_PTE_SWPTYP_LOBIT)
@@ -133,11 +133,11 @@ addr_t vmap_page_range(struct pcb_t *caller, addr_t addr, int pgnum,
 addr_t vm_map_ram(struct pcb_t *caller, addr_t astart, addr_t aend, addr_t mapstart, int incpgnum, struct vm_rg_struct *ret_rg);
 addr_t alloc_pages_range(struct pcb_t *caller, int incpgnum, struct framephy_struct **frm_lst);
 int __swap_cp_page(struct memphy_struct *mpsrc, addr_t srcfpn,
-                struct memphy_struct *mpdst, addr_t dstfpn, struct pcb_t *caller);
+                struct memphy_struct *mpdst, addr_t dstfpn, struct pcb_t *caller, int active_mswp_id);
 int get_pd_from_address(addr_t addr, addr_t* pgd, addr_t* p4d, addr_t* pud, addr_t* pmd, addr_t* pt);
 int get_pd_from_pagenum(addr_t pgn, addr_t* pgd, addr_t* p4d, addr_t* pud, addr_t* pmd, addr_t* pt);
-int pte_set_fpn(struct pcb_t *caller, addr_t pgn, addr_t fpn);
-int pte_set_swap(struct pcb_t *caller, addr_t pgn, int swptyp, addr_t swpoff);
+int pte_set_fpn(struct pcb_t *owner, addr_t pgn, addr_t fpn, int is_dirty);
+int pte_set_swap(struct pcb_t *owner, addr_t pgn, int swptyp, addr_t swpoff);
 uint32_t pte_get_entry(struct pcb_t *caller, addr_t pgn);
 int pte_set_entry(struct pcb_t *caller, addr_t pgn, uint32_t pte_val);
 int init_pte(addr_t *pte,

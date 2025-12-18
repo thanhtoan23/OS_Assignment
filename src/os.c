@@ -108,10 +108,10 @@ static void * cpu_routine(void * args) {
 
 static void * ld_routine(void * args) {
 #ifdef MM_PAGING
-	struct memphy_struct* mram = ((struct mmpaging_ld_args *)args)->mram;
-	struct memphy_struct** mswp = ((struct mmpaging_ld_args *)args)->mswp;
-	struct memphy_struct* active_mswp = ((struct mmpaging_ld_args *)args)->active_mswp;
-	struct timer_id_t * timer_id = ((struct mmpaging_ld_args *)args)->timer_id;
+	struct mmpaging_ld_args *ld_ptr = (struct mmpaging_ld_args *)args;
+    struct memphy_struct* mram = ld_ptr->mram;
+    struct memphy_struct** mswp = ld_ptr->mswp;
+    struct timer_id_t * timer_id = ld_ptr->timer_id;
 #else
 	struct timer_id_t * timer_id = (struct timer_id_t*)args;
 #endif
@@ -133,7 +133,7 @@ static void * ld_routine(void * args) {
 		init_mm(proc->mm, proc);
 		krnl->mram = mram;
 		krnl->mswp = mswp;
-		krnl->active_mswp = active_mswp;
+		krnl->active_mswp_id = ld_ptr->active_mswp_id;
 #endif
 		printf("\tLoaded a process at %s, PID: %d PRIO: %ld\n",
 			ld_processes.path[i], proc->pid, ld_processes.prio[i]);
@@ -263,32 +263,43 @@ int main(int argc, char * argv[]) {
 	start_timer();
 
 #ifdef MM_PAGING
-	/* Init all MEMPHY include 1 MEMRAM and n of MEMSWP */
-	int rdmflag = 1; /* By default memphy is RANDOM ACCESS MEMORY */
+    /* 1. Khởi tạo RAM */
+    int rdmflag = 1;
+    struct memphy_struct *mram = malloc(sizeof(struct memphy_struct));
+    init_memphy(mram, memramsz, rdmflag);
 
-	struct memphy_struct mram;
-	struct memphy_struct mswp[PAGING_MAX_MMSWP];
-
-	/* Create MEM RAM */
-	init_memphy(&mram, memramsz, rdmflag);
-	MEMPHY_dump(&mram);
-        /* Create all MEM SWAP */ 
-	int sit;
-	for(sit = 0; sit < PAGING_MAX_MMSWP; sit++)
-	       init_memphy(&mswp[sit], memswpsz[sit], rdmflag);
-
-	/* In Paging mode, it needs passing the system mem to each PCB through loader*/
-	struct mmpaging_ld_args *mm_ld_args = malloc(sizeof(struct mmpaging_ld_args));
-
-	if (os.mm == NULL) {
-        os.mm = malloc(sizeof(struct mm_struct));
-        init_mm(os.mm, NULL); // Khởi tạo MM cho Kernel
+    /* 2. Khởi tạo mảng các thiết bị SWAP */
+    // Thay vì dùng mảng tĩnh, ta dùng mảng các con trỏ để dễ quản lý trong krnl_t
+    struct memphy_struct **mswp = malloc(PAGING_MAX_MMSWP * sizeof(struct memphy_struct *));
+    
+    int sit;
+    for(sit = 0; sit < PAGING_MAX_MMSWP; sit++) {
+        if (memswpsz[sit] > 0) {
+            mswp[sit] = malloc(sizeof(struct memphy_struct));
+            init_memphy(mswp[sit], memswpsz[sit], rdmflag);
+        } else {
+            mswp[sit] = NULL; // Đánh dấu vùng swap không sử dụng
+        }
     }
 
-	mm_ld_args->timer_id = ld_event;
-	mm_ld_args->mram = (struct memphy_struct *) &mram;
-	mm_ld_args->mswp = (struct memphy_struct**) &mswp;
-	mm_ld_args->active_mswp = (struct memphy_struct *) &mswp[0];
+    /* 3. Khởi tạo cấu trúc đối số cho Loader */
+    struct mmpaging_ld_args *mm_ld_args = malloc(sizeof(struct mmpaging_ld_args));
+    
+    // Khởi tạo Kernel MM nếu chưa có
+    if (os.mm == NULL) {
+        os.mm = malloc(sizeof(struct mm_struct));
+        init_mm(os.mm, NULL);
+    }
+
+    // Gán các tài nguyên vào Kernel hệ thống (os)
+    os.mram = mram;
+    os.mswp = mswp;
+    os.active_mswp_id = 0; // Bắt đầu Round Robin từ Swap 0
+
+    // Truyền tham số cho loader thread
+    mm_ld_args->timer_id = ld_event;
+    mm_ld_args->mram = mram;
+    mm_ld_args->mswp = mswp;
     mm_ld_args->active_mswp_id = 0;
 #endif
 
@@ -311,6 +322,15 @@ int main(int argc, char * argv[]) {
 		pthread_join(cpu[i], NULL);
 	}
 	pthread_join(ld, NULL);
+
+#ifdef MM_PAGING
+    free(os.mram);
+    for(int i = 0; i < PAGING_MAX_MMSWP; i++) {
+        if (os.mswp[i] != NULL) free(os.mswp[i]);
+    }
+    free(os.mswp);
+    free(mm_ld_args);
+#endif
 
 	/* Stop timer */
 	stop_timer();

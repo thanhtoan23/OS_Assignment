@@ -54,16 +54,14 @@ struct vm_area_struct *get_vma_by_num(struct mm_struct *mm, int vmaid)
  * @dst_fpn: destination frame number
  * @direction: 0 = RAM->SWAP (swap out), 1 = SWAP->RAM (swap in)
  */
-int __mm_swap_page(struct pcb_t *caller, addr_t src_fpn, addr_t dst_fpn, int direction)
+int __mm_swap_page(struct pcb_t *caller, addr_t src_fpn, addr_t dst_fpn, int direction, int swp_type)
 {
-    if (direction == 0) { // SWAP OUT: RAM -> SWAP
-        __swap_cp_page(caller->krnl->mram, src_fpn, 
-                       caller->krnl->active_mswp, dst_fpn, caller);
-        printf("SYSCALL: Swap OUT completed (RAM:%lu -> SWAP:%lu)\n", src_fpn, dst_fpn);
-    } else { // SWAP IN: SWAP -> RAM
-        __swap_cp_page(caller->krnl->active_mswp, src_fpn,
-                       caller->krnl->mram, dst_fpn, caller);
-        printf("SYSCALL: Swap IN completed (SWAP:%lu -> RAM:%lu)\n", src_fpn, dst_fpn);
+    if (direction == 0) { // SWAP OUT: RAM -> SWAP[swp_type]
+        __swap_cp_page(caller->krnl->mram, src_fpn, caller->krnl->mswp[swp_type], dst_fpn, caller, swp_type);
+        printf("SYSCALL: Swap OUT to SWAP[%d] (RAM:%lu -> SWAP:%lu)\n", swp_type, src_fpn, dst_fpn);
+    } else { // SWAP IN: SWAP[swp_type] -> RAM
+        __swap_cp_page(caller->krnl->mswp[swp_type], src_fpn, caller->krnl->mram, dst_fpn, caller, swp_type);
+        printf("SYSCALL: Swap IN from SWAP[%d] (SWAP:%lu -> RAM:%lu)\n", swp_type, src_fpn, dst_fpn);
     }
     return 0;
 }

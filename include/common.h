@@ -137,7 +137,6 @@ struct krnl_t
 	struct mm_struct *mm;
 	struct memphy_struct *mram;
 	struct memphy_struct **mswp;
-	struct memphy_struct *active_mswp;
 	uint32_t active_mswp_id;
 #endif
 };
