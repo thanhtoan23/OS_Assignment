@@ -47,6 +47,7 @@ typedef ADDR_TYPE addr_t;
 
 struct pgn_t{
    addr_t pgn;
+   struct pcb_t *owner;
    struct pgn_t *pg_next; 
 };
 
