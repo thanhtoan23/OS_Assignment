@@ -1,4 +1,6 @@
-10 2
-alloc 8000 1
-alloc 8000 2
-
+15 5
+alloc 4000 2
+write 25 2 4112
+calc
+read 2 4112 3
+free 2

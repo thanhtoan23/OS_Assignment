@@ -65,6 +65,8 @@ struct inst_t
 	arg_t arg_1;
 	arg_t arg_2;
 	arg_t arg_3;
+	arg_t arg_4;
+	arg_t arg_5;
 };
 
 struct code_seg_t
@@ -135,7 +137,6 @@ struct krnl_t
 	struct mm_struct *mm;
 	struct memphy_struct *mram;
 	struct memphy_struct **mswp;
-	struct memphy_struct *active_mswp;
 	uint32_t active_mswp_id;
 #endif
 };

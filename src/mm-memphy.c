@@ -58,9 +58,6 @@ int MEMPHY_seq_read(struct memphy_struct *mp, addr_t addr, BYTE *value)
    if (!mp->rdmflg)
       return -1; /* Not compatible mode for sequential read */
 
-   if (addr < 0 || addr >= mp->maxsz) 
-      return -1; // boundary check
-
    MEMPHY_mv_csr(mp, addr);  // move cursor to the address
    *value = (BYTE)mp->storage[addr];  // read byte at the address
 
@@ -77,9 +74,6 @@ int MEMPHY_read(struct memphy_struct *mp, addr_t addr, BYTE *value)
 {
    if (mp == NULL)
       return -1;
-
-   if (addr < 0 || addr >= mp->maxsz)
-      return -1; // boundary check
 
    if (mp->rdmflg) //  check if RAM, damflag = 1
       *value = mp->storage[addr]; // direct read
@@ -177,7 +171,6 @@ int MEMPHY_get_freefp(struct memphy_struct *mp, addr_t *retfpn)
    pthread_mutex_lock(&mm_lock);
    struct framephy_struct *fp = mp->free_fp_list; // ← Lấy frame đầu
    if (fp == NULL){
-      printf("3\n");
       pthread_mutex_unlock(&mm_lock);
       return -1;
    }
