@@ -252,102 +252,69 @@ int pte_set_entry(struct pcb_t *caller, addr_t pgn, uint32_t pte_val) {
 
 
 /**
- * vmap_pgd_memset - Map a range of virtual pages into page table structure without physical allocation
- * 
- * @caller: Process control block of the calling process
- * @addr:   Starting virtual address (must be page-aligned)
- * @pgnum:  Number of pages to map
- * 
- * Return: 0 on success, -1 on error
- * 
- * Description:
- * This function emulates page directory/page table creation for a range of virtual pages
- * without actually allocating physical frames. It's used for:
- * 1. Testing sparse virtual memory allocation in 64-bit address space
- * 2. Pre-populating page table structures for large memory regions
- * 3. Supporting lazy allocation mechanisms
- * 
- * The function ensures that all necessary page table levels (PGD, P4D, PUD, PMD, PT)
- * exist for the specified virtual address range. If they don't exist, they are created.
- * No physical frames are allocated - PTE entries remain with PRESENT=0.
- * 
- * [Cite: 749, 750 in the assignment document]
+ * vmap_pgd_memset - Map a range of virtual pages into page table structure
+ * Sửa lỗi: Cập nhật sbrk và freerg_list để Best Fit không chiếm dụng vùng này.
  */
 int vmap_pgd_memset(struct pcb_t *caller, addr_t addr, int pgnum)
 {
-    /* Validate input parameters */
-    if (caller == NULL) {
-        printf("ERROR vmap_pgd_memset: caller is NULL\n");
+    /* 1. Validate input parameters */
+    if (caller == NULL || caller->mm == NULL || pgnum <= 0) {
         return -1;
     }
     
-    if (caller->mm == NULL) {
-        printf("ERROR vmap_pgd_memset: caller->mm is NULL (PID=%d)\n", caller->pid);
-        return -1;
-    }
+    /* 2. Check and Align address */
+    addr_t aligned_addr = addr & ~(PAGING64_PAGESZ - 1);
+    addr_t pgn_start = PAGING64_PGN(aligned_addr);
     
-    if (pgnum <= 0) {
-        printf("ERROR vmap_pgd_memset: invalid pgnum=%d (must be >0)\n", pgnum);
-        return -1;
-    }
+    printf(">>> vmap_pgd_memset: PID=%d, start_addr=0x%lx, num_pages=%d\n",
+           caller->pid, aligned_addr, pgnum);
     
-    /* Check address alignment (must be page-aligned) */
-    if (addr % PAGING64_PAGESZ != 0) {
-        printf("WARNING vmap_pgd_memset: address 0x%lx not page-aligned, aligning...\n", addr);
-        addr = addr & ~(PAGING64_PAGESZ - 1);  /* Align down to page boundary */
-    }
-    
-    /* Calculate starting page number */
-    addr_t pgn_start = PAGING64_PGN(addr);
-    
-    printf(">>> vmap_pgd_memset: PID=%d, start_addr=0x%lx, start_pgn=%lu, num_pages=%d\n",
-           caller->pid, addr, pgn_start, pgnum);
-    
-    /* For each page in the range, ensure page table structure exists */
+    /* 3. Khởi tạo cấu trúc bảng trang (Page Table Hierarchy) */
     for (int i = 0; i < pgnum; i++) {
         addr_t current_pgn = pgn_start + i;
         
-        /* Lock to protect concurrent access to page tables */
         pthread_mutex_lock(&mm_lock);
-        
-        /* Get PTE pointer, creating missing page table levels if needed (alloc=1) */
+        // Tham số 1 (alloc=1) bắt buộc tạo bảng mới nếu chưa tồn tại
         addr_t *pte_ptr = __get_pte_ptr(caller->mm, current_pgn, 1);
         
         if (pte_ptr == NULL) {
-            /* This should not happen if __get_pte_ptr succeeds with alloc=1 */
-            printf("ERROR vmap_pgd_memset: Failed to get/create PTE for pgn=%lu\n", current_pgn);
             pthread_mutex_unlock(&mm_lock);
             return -1;
         }
         
-        /* Verify that PTE is initialized to 0 (not present, not swapped) */
-        if (*pte_ptr != 0) {
-            printf("WARNING vmap_pgd_memset: PTE for pgn=%lu already initialized (value=0x%lx)\n",
-                   current_pgn, *pte_ptr);
-        } else {
-            /* Optionally, we could set some metadata bits here if needed */
-            /* For example: mark as reserved but not present */
-            /* *pte_ptr = PAGING_PTE_RESERVED_MASK; */
-        }
-        
+        // PTE khởi tạo là 0 (Present=0), sẽ nạp vật lý sau khi có truy cập (Lazy)
         pthread_mutex_unlock(&mm_lock);
+    }
+    
+    /* 4. CẬP NHẬT VMA (PHẦN QUAN TRỌNG ĐỂ FIX LỖI BEST FIT) */
+    // Giả định sử dụng VMA số 0 (vmaid=0)
+    struct vm_area_struct *cur_vma = get_vma_by_num(caller->mm, 0);
+    if (cur_vma != NULL) {
+        addr_t vmap_end_addr = aligned_addr + (pgnum * PAGING64_PAGESZ);
         
-        /* Progress indicator for large mappings (optional) */
-        if ((i + 1) % 1000 == 0) {
-            printf("  Progress: %d/%d pages mapped...\n", i + 1, pgnum);
+        // Nếu vùng vmap vượt quá sbrk hiện tại, ta đẩy sbrk lên
+        if (vmap_end_addr > cur_vma->sbrk) {
+            cur_vma->sbrk = vmap_end_addr;
+        }
+
+        // Cập nhật lại danh sách vùng trống để Best Fit bắt đầu tìm từ sau vùng này
+        struct vm_rg_struct *freerg = cur_vma->vm_freerg_list;
+        while (freerg != NULL) {
+            // Nếu vùng trống bị chồng lấn bởi vmap, đẩy điểm bắt đầu của nó đi
+            if (freerg->rg_start < vmap_end_addr) {
+                freerg->rg_start = vmap_end_addr;
+                
+                // Nếu sau khi đẩy, vùng trống trở nên âm hoặc bằng 0, ta có thể xóa node 
+                // nhưng để đơn giản nhất, ta chỉ cần đảm bảo start >= end
+                if (freerg->rg_start > freerg->rg_end) {
+                    freerg->rg_start = freerg->rg_end;
+                }
+            }
+            freerg = freerg->rg_next;
         }
     }
     
-    /* Track statistics for debugging/optimization */
-#ifdef VMAP_STATISTICS
-    caller->mm->vmap_count += pgnum;
-    printf("Statistics: PID=%d total vmap pages=%lu\n", 
-           caller->pid, caller->mm->vmap_count);
-#endif
-    
-    printf("<<< vmap_pgd_memset: Successfully mapped %d pages (PID=%d)\n", 
-           pgnum, caller->pid);
-    
+    printf("<<< vmap_pgd_memset: Done. New VMA sbrk: 0x%lx\n", cur_vma->sbrk);
     return 0;
 }
 

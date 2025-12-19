@@ -3,8 +3,8 @@
  * Using LRU replacement policy
  */
 
-#include "os-mm.h"
 #include "common.h"
+#include "os-mm.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -82,7 +82,7 @@ static struct tlb_entry_t** tlb_find_lru_victim(struct tlb_t* tlb, int index) {
 }
 
 /* Insert/Update TLB entry */
-int tlb_insert(struct tlb_t* tlb, addr_t vpn, addr_t fpn, uint32_t pid, 
+int tlb_insert(struct tlb_t* tlb, addr_t vpn, int fpn, uint32_t pid, 
                uint8_t dirty, uint8_t referenced) {
     pthread_mutex_lock(&tlb_lock);
     
@@ -113,8 +113,8 @@ int tlb_insert(struct tlb_t* tlb, addr_t vpn, addr_t fpn, uint32_t pid,
             /* Reuse invalid entry */
         } else {
             /* Replace LRU victim */
-            //printf("TLB LRU replacement: VPN %lu (PID %d) -> VPN %lu (PID %d)\n",
-            //       victim->vpn, victim->pid, vpn, pid);
+            printf("TLB LRU replacement: VPN %lu (PID %d) -> VPN %lu (PID %d)\n",
+                  victim->vpn, victim->pid, vpn, pid);
         }
         
         /* Initialize new entry */
@@ -132,7 +132,7 @@ int tlb_insert(struct tlb_t* tlb, addr_t vpn, addr_t fpn, uint32_t pid,
 }
 
 /* Lookup TLB - returns 1 if hit, 0 if miss */
-int tlb_lookup(struct tlb_t* tlb, addr_t vpn, uint32_t pid, addr_t* fpn) {
+int tlb_lookup(struct tlb_t* tlb, addr_t vpn, uint32_t pid, int* fpn) {
     pthread_mutex_lock(&tlb_lock);
     
     struct tlb_entry_t* entry = tlb_find_entry(tlb, vpn, pid);
@@ -253,7 +253,7 @@ void tlb_dump(struct tlb_t* tlb) {
         struct tlb_entry_t* entry = tlb->entries[i];
         while (entry != NULL) {
             if (entry->valid) {
-                printf("  [%d] VPN: %u -> FPN: %u (PID: %d, Age: %lu)\n",
+                printf("  [%d] VPN: %lu -> FPN: %u (PID: %d, Age: %lu)\n",
                        i, entry->vpn, entry->fpn, entry->pid, 
                        tlb->access_counter - entry->last_used);
                 valid_count++;

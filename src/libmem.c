@@ -230,7 +230,7 @@ int liballoc(struct pcb_t *proc, addr_t size, uint32_t reg_index)
     return -1;
   }
 
-  proc->regs[reg_index] = addr;
+  // proc->regs[reg_index] = addr;
 printf("%s:%d\n",__func__,__LINE__);
 #ifdef IODUMP
   /* TODO dump IO content (if needed) */
@@ -544,11 +544,11 @@ int pg_getval(struct mm_struct *mm, addr_t addr, BYTE *data, struct pcb_t *calle
            caller->pid, addr, pgn, off);
     
     /* 1. TRY TLB FIRST */
-    addr_t tlb_fpn;
+    int tlb_fpn;
     if (caller->krnl->tlb && 
         tlb_lookup(caller->krnl->tlb, pgn, caller->pid, &tlb_fpn)) {
         /* TLB HIT */
-        printf("  TLB HIT: VPN %lu -> FPN %lu\n", pgn, tlb_fpn);
+        printf("  TLB HIT: VPN %lu -> FPN %u\n", pgn, tlb_fpn);
         fpn = tlb_fpn;
         
         /* Update reference bit in PTE */
@@ -606,11 +606,11 @@ int pg_setval(struct mm_struct *mm, addr_t addr, BYTE value, struct pcb_t *calle
            caller->pid, addr, pgn, off);
     
     /* 1. TRY TLB FIRST */
-    addr_t tlb_fpn;
+    int tlb_fpn;
     if (caller->krnl->tlb && 
         tlb_lookup(caller->krnl->tlb, pgn, caller->pid, &tlb_fpn)) {
         /* TLB HIT */
-        printf("  TLB HIT: VPN %lu -> FPN %lu\n", pgn, tlb_fpn);
+        printf("  TLB HIT: VPN %lu -> FPN %u\n", pgn, tlb_fpn);
         fpn = tlb_fpn;
         
         /* Update reference and dirty bits in PTE */
@@ -687,12 +687,12 @@ int libread(
     struct pcb_t *proc, // Process executing the instruction
     uint32_t source,    // Index of source register
     addr_t offset,    // Source address = [source] + [offset]
-    uint32_t* destination)
+    uint32_t destination)
 {
   BYTE data;
   int val = __read(proc, 0, source, offset, &data);
 
-  *destination = data;
+  if (val) proc->regs[destination] = data; 
 printf("%s:%d\n", __func__, __LINE__);
 #ifdef IODUMP
   /* TODO dump IO content (if needed) */
@@ -964,21 +964,30 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, addr_t size, struct vm_r
   newrg->rg_end = -1;
   newrg->rg_next = NULL;
 
-  /* BEST FIT: Find the smallest region that fits 'size' */
+  /* Calculate page-aligned size */
+#ifdef MM64
+  addr_t aligned_size = PAGING64_PAGE_ALIGNSZ(size);
+#else
+  addr_t aligned_size = PAGING_PAGE_ALIGNSZ(size);
+#endif
+  
+  printf("BEST FIT search for size=%lu (aligned to %lu) in vma %d:\n", 
+         size, aligned_size, vmaid);
+
+  /* BEST FIT: Find the smallest region that fits 'aligned_size' */
   struct vm_rg_struct *best_fit = NULL;
   struct vm_rg_struct *best_fit_prev = NULL;
   struct vm_rg_struct *current = rgit;
   struct vm_rg_struct *prev = NULL;
   addr_t best_fit_size = (addr_t)-1; // Initialize to max value
-
-  printf("BEST FIT search for size=%lu in vma %d:\n", size, vmaid);
   
   while (current != NULL) {
     addr_t region_size = current->rg_end - current->rg_start;
     printf("  Checking region [%lu-%lu] (size=%lu)\n", 
            current->rg_start, current->rg_end, region_size);
     
-    if (current->rg_start + size <= current->rg_end) {
+    /* Check if this region can fit the aligned size */
+    if (current->rg_start + aligned_size <= current->rg_end) {
       /* This region can fit the request */
       if (region_size < best_fit_size) {
         /* Found a better (smaller) fit */
@@ -995,26 +1004,21 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, addr_t size, struct vm_r
 
   /* If no suitable region found */
   if (best_fit == NULL) {
-    printf("BEST FIT: No region found that can fit size=%lu\n", size);
+    printf("BEST FIT: No region found that can fit aligned size=%lu\n", aligned_size);
     return -1;
   }
 
   printf("BEST FIT selected: [%lu-%lu] (size=%lu)\n",
          best_fit->rg_start, best_fit->rg_end, best_fit_size);
 
-  /* Allocate from the best fit region */
+  /* Allocate from the best fit region - page-aligned */
   newrg->rg_start = best_fit->rg_start;
-  newrg->rg_end = best_fit->rg_start + size;
+  newrg->rg_end = best_fit->rg_start + aligned_size;
 
-  /* Update the free region list */
-  if (best_fit->rg_start + size < best_fit->rg_end) {
-    /* Region not fully used - shrink it */
-    best_fit->rg_start = best_fit->rg_start + size;
-    printf("  Shrinking region to [%lu-%lu]\n", 
-           best_fit->rg_start, best_fit->rg_end);
-  } else {
-    /* Region fully used - remove it from free list */
-    printf("  Region fully used, removing from free list\n");
+  /* IMPORTANT: Check if the region fits exactly */
+  if (best_fit->rg_start + aligned_size == best_fit->rg_end) {
+    /* Region fits exactly - remove it from free list */
+    printf("  Region fits exactly, removing from free list\n");
     
     if (best_fit_prev == NULL) {
       /* best_fit is the head of the list */
@@ -1024,14 +1028,64 @@ int get_free_vmrg_area(struct pcb_t *caller, int vmaid, addr_t size, struct vm_r
     }
     
     /* Free the node if it was dynamically allocated */
-    /* Note: Check if this node was allocated with malloc in __free() */
     if (best_fit != &caller->mm->symrgtbl[0]) { // Not from symbol table
+      free(best_fit);
+    }
+  } else {
+    /* Region does not fit exactly - DO NOT SHRINK, find another region */
+    printf("  Region does not fit exactly (would need shrinking). Skipping.\n");
+    printf("  Looking for another region that fits exactly...\n");
+    
+    /* Try to find a region that fits exactly */
+    current = rgit;
+    prev = NULL;
+    best_fit = NULL;
+    best_fit_prev = NULL;
+    best_fit_size = (addr_t)-1;
+    
+    while (current != NULL) {
+      addr_t region_size = current->rg_end - current->rg_start;
+      
+      /* Check for exact fit */
+      if (current->rg_start + aligned_size == current->rg_end) {
+        if (region_size < best_fit_size) {
+          best_fit = current;
+          best_fit_prev = prev;
+          best_fit_size = region_size;
+        }
+      }
+      
+      prev = current;
+      current = current->rg_next;
+    }
+    
+    if (best_fit == NULL) {
+      printf("BEST FIT: No region found with exact fit for aligned size=%lu\n", aligned_size);
+      return -1;
+    }
+    
+    printf("BEST FIT exact match selected: [%lu-%lu] (size=%lu)\n",
+           best_fit->rg_start, best_fit->rg_end, best_fit_size);
+    
+    /* Allocate the exact fit region */
+    newrg->rg_start = best_fit->rg_start;
+    newrg->rg_end = best_fit->rg_end;
+    
+    /* Remove from free list */
+    if (best_fit_prev == NULL) {
+      cur_vma->vm_freerg_list = best_fit->rg_next;
+    } else {
+      best_fit_prev->rg_next = best_fit->rg_next;
+    }
+    
+    /* Free the node if it was dynamically allocated */
+    if (best_fit != &caller->mm->symrgtbl[0]) {
       free(best_fit);
     }
   }
 
-  printf("BEST FIT allocated: [%lu-%lu] (size=%lu)\n", 
-         newrg->rg_start, newrg->rg_end, size);
+  printf("BEST FIT allocated: [%lu-%lu] (aligned size=%lu)\n", 
+         newrg->rg_start, newrg->rg_end, aligned_size);
   
   return 0;
 }
