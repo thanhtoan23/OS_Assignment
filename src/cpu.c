@@ -4,9 +4,13 @@
 #include "mm.h"
 #include "syscall.h"
 #include "libmem.h"
+#include "pthread.h"
+
+static pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int calc(struct pcb_t *proc)
 {
+	printf("PID: %d. Calc...\n", proc->pid);
 	return ((unsigned long)proc & 0UL);
 }
 
@@ -59,10 +63,12 @@ int write(
 }
 
 int run(struct pcb_t *proc)
-{
+{	
+	pthread_mutex_lock(&log_lock);
 	/* Check if Program Counter point to the proper instruction */
 	if (proc->pc >= proc->code->size)
 	{
+		pthread_mutex_unlock(&log_lock);
 		return 1;
 	}
 
@@ -108,5 +114,6 @@ switch (ins.opcode)
 	default:
 		stat = 1;
 	}
+	pthread_mutex_unlock(&log_lock);
 	return stat;
 }

@@ -218,7 +218,7 @@ int __free(struct pcb_t *caller, int vmaid, int rgid)
 /*liballoc - PAGING-based allocate a region memory
  *@proc:  Process executing the instruction
  *@size: allocated size
- *@reg_index: memory region ID (used to identify variable in symbole table)
+ *@reg_index: memory region ID (used to identify variable in symbol table)
  */
 int liballoc(struct pcb_t *proc, addr_t size, uint32_t reg_index)
 {
@@ -533,104 +533,126 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     return 0;
 }
 
-/*pg_getval - read value at given offset
- *@mm: memory region
- *@addr: virtual address to acess
- *@value: value
- * 
- */
+/*pg_getval - read value at given offset */
 int pg_getval(struct mm_struct *mm, addr_t addr, BYTE *data, struct pcb_t *caller)
 {
-  // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
-  addr_t pgn = PAGING64_PGN(addr);        // Page number (phần cao của VA)
-  addr_t off = PAGING64_OFFST(addr);      // Offset (phần thấp của VA)
-  int fpn;                            // Frame number sẽ lấy từ pg_getpage
-  printf("READ: pid: %d, addr: %ld, pgn: %ld, off: %ld\n", caller->pid, addr, pgn, off);
-  
-  // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
-  if (pg_getpage(mm, pgn, &fpn, caller) != 0)
-    return -1; /* invalid page access */
-
-  else {
-      /* Set reference bit when page is accessed */
-      uint32_t pte = pte_get_entry(caller, pgn);
-      SETBIT(pte, PAGING_PTE_REFERENCED_MASK);
-      pte_set_entry(caller, pgn, pte);
-      printf("Set reference bit for pgn=%ld\n", pgn);
-  }
-
-  // BƯỚC 3: Tính địa chỉ vật lý (Physical Address)
-  // PA = (FPN * PAGE_SIZE) + offset
-  addr_t phyaddr = (fpn * PAGING64_PAGESZ) + off;
-
-  // BƯỚC 4: Đọc byte từ RAM bằng syscall
-  struct sc_regs regs;
-  regs.a1 = SYSMEM_IO_READ;  // Lệnh = "đọc từ RAM"
-  regs.a2 = phyaddr;         // Địa chỉ vật lý cần đọc
-  regs.a3 = 0;               // Chỗ lưu kết quả (được kernel điền)
-  
-  if (syscall(caller->krnl, caller->pid, 17, &regs) != 0) {
-    return -1;
-  }
-
-  // BƯỚC 5: Lấy giá trị byte đọc được từ regs.a3
-  *data = (BYTE)regs.a3;
-
-  return 0;
+    addr_t pgn = PAGING64_PGN(addr);
+    addr_t off = PAGING64_OFFST(addr);
+    int fpn;
+    
+    printf("READ: pid: %d, addr: %ld, pgn: %ld, off: %ld\n", 
+           caller->pid, addr, pgn, off);
+    
+    /* 1. TRY TLB FIRST */
+    addr_t tlb_fpn;
+    if (caller->krnl->tlb && 
+        tlb_lookup(caller->krnl->tlb, pgn, caller->pid, &tlb_fpn)) {
+        /* TLB HIT */
+        printf("  TLB HIT: VPN %lu -> FPN %lu\n", pgn, tlb_fpn);
+        fpn = tlb_fpn;
+        
+        /* Update reference bit in PTE */
+        uint32_t pte = pte_get_entry(caller, pgn);
+        SETBIT(pte, PAGING_PTE_REFERENCED_MASK);
+        pte_set_entry(caller, pgn, pte);
+        
+        /* Update referenced bit in TLB */
+        tlb_set_referenced(caller->krnl->tlb, pgn, caller->pid);
+    } else {
+        /* TLB MISS - go through normal page lookup */
+        printf("  TLB MISS for VPN %lu\n", pgn);
+        
+        if (pg_getpage(mm, pgn, &fpn, caller) != 0)
+            return -1;
+        
+        /* Update reference bit */
+        uint32_t pte = pte_get_entry(caller, pgn);
+        SETBIT(pte, PAGING_PTE_REFERENCED_MASK);
+        pte_set_entry(caller, pgn, pte);
+        
+        /* INSERT INTO TLB */
+        if (caller->krnl->tlb) {
+            int dirty = PAGING_PTE_GET_DIRTY(pte);
+            int referenced = 1; /* Just accessed */
+            tlb_insert(caller->krnl->tlb, pgn, fpn, caller->pid, 
+                      dirty, referenced);
+            printf("  Inserted into TLB: VPN %lu -> FPN %u\n", pgn, fpn);
+        }
+    }
+    
+    /* Calculate physical address and read */
+    addr_t phyaddr = (fpn * PAGING64_PAGESZ) + off;
+    struct sc_regs regs;
+    regs.a1 = SYSMEM_IO_READ;
+    regs.a2 = phyaddr;
+    regs.a3 = 0;
+    
+    if (syscall(caller->krnl, caller->pid, 17, &regs) != 0) {
+        return -1;
+    }
+    
+    *data = (BYTE)regs.a3;
+    return 0;
 }
 
-/*pg_setval - write value to given offset
- *@mm: memory region
- *@addr: virtual address to acess
- *@value: value
- * 
- */
+/*pg_setval - write value to given offset */
 int pg_setval(struct mm_struct *mm, addr_t addr, BYTE value, struct pcb_t *caller)
 {
-  // BƯỚC 1: Tách địa chỉ ảo thành page number + offset
-  addr_t pgn = PAGING64_PGN(addr);        // Page number (phần cao của VA)
-  addr_t off = PAGING64_OFFST(addr);      // Offset (phần thấp của VA)
-  int fpn;                            // Frame number sẽ lấy từ pg_getpage
-  printf("WRITE: pid: %d, addr: %ld, pgn: %ld, off: %ld\n", caller->pid, addr, pgn, off);
-
-  // BƯỚC 2: Đảm bảo trang ở RAM (nếu không → trigger page fault → swap)
-  if (pg_getpage(mm, pgn, &fpn, caller) != 0)
-    return -1; /* invalid page access */
-
-  else {
-      /* Set reference bit when page is accessed */
-      uint32_t pte = pte_get_entry(caller, pgn);
-      SETBIT(pte, PAGING_PTE_REFERENCED_MASK);
-      pte_set_entry(caller, pgn, pte);
-      printf("Set reference bit for pgn=%ld\n", pgn);
-  }
-
-  // BƯỚC 3: Tính địa chỉ vật lý (Physical Address)
-  // PA = (FPN * PAGE_SIZE) + offset
-  addr_t phyaddr = (fpn * PAGING64_PAGESZ) + off;
-
-  // BƯỚC 4: Ghi byte vào RAM bằng syscall
-  struct sc_regs regs;
-  regs.a1 = SYSMEM_IO_WRITE;  // Lệnh = "ghi vào RAM"
-  regs.a2 = phyaddr;          // Địa chỉ vật lý cần ghi
-  regs.a3 = value;            // Giá trị byte cần ghi
-  
-  if (syscall(caller->krnl, caller->pid, 17, &regs) != 0)
-    return -1;
-
-  // BƯỚC 5: SET DIRTY BIT SAU KHI GHI
-  // Lấy PTE hiện tại
-  uint32_t pte = pte_get_entry(caller, pgn);
-  
-  // Set dirty bit
-  SETBIT(pte, PAGING_PTE_DIRTY_MASK);
-  
-  // Cập nhật lại PTE
-  pte_set_entry(caller, pgn, pte);
-  
-  printf("Set dirty bit for pgn=%lu after write operation\n", pgn);
-
-  return 0;
+    addr_t pgn = PAGING64_PGN(addr);
+    addr_t off = PAGING64_OFFST(addr);
+    int fpn;
+    
+    printf("WRITE: pid: %d, addr: %ld, pgn: %ld, off: %ld\n", 
+           caller->pid, addr, pgn, off);
+    
+    /* 1. TRY TLB FIRST */
+    addr_t tlb_fpn;
+    if (caller->krnl->tlb && 
+        tlb_lookup(caller->krnl->tlb, pgn, caller->pid, &tlb_fpn)) {
+        /* TLB HIT */
+        printf("  TLB HIT: VPN %lu -> FPN %lu\n", pgn, tlb_fpn);
+        fpn = tlb_fpn;
+        
+        /* Update reference and dirty bits in PTE */
+        uint32_t pte = pte_get_entry(caller, pgn);
+        SETBIT(pte, PAGING_PTE_REFERENCED_MASK);
+        SETBIT(pte, PAGING_PTE_DIRTY_MASK);
+        pte_set_entry(caller, pgn, pte);
+        
+        /* Update bits in TLB */
+        tlb_set_referenced(caller->krnl->tlb, pgn, caller->pid);
+        tlb_set_dirty(caller->krnl->tlb, pgn, caller->pid);
+    } else {
+        /* TLB MISS - go through normal page lookup */
+        printf("  TLB MISS for VPN %lu\n", pgn);
+        
+        if (pg_getpage(mm, pgn, &fpn, caller) != 0)
+            return -1;
+        
+        /* Update reference and dirty bits in PTE */
+        uint32_t pte = pte_get_entry(caller, pgn);
+        SETBIT(pte, PAGING_PTE_REFERENCED_MASK);
+        SETBIT(pte, PAGING_PTE_DIRTY_MASK);
+        pte_set_entry(caller, pgn, pte);
+        
+        /* INSERT INTO TLB with dirty=1 (write operation) */
+        if (caller->krnl->tlb) {
+            tlb_insert(caller->krnl->tlb, pgn, fpn, caller->pid, 1, 1);
+            printf("  Inserted into TLB: VPN %lu -> FPN %u (dirty=1)\n", pgn, fpn);
+        }
+    }
+    
+    /* Calculate physical address and write */
+    addr_t phyaddr = (fpn * PAGING64_PAGESZ) + off;
+    struct sc_regs regs;
+    regs.a1 = SYSMEM_IO_WRITE;
+    regs.a2 = phyaddr;
+    regs.a3 = value;
+    
+    if (syscall(caller->krnl, caller->pid, 17, &regs) != 0)
+        return -1;
+    
+    return 0;
 }
 
 /*__read - read value in region memory
@@ -800,20 +822,19 @@ int free_pcb_memph(struct pcb_t *caller)
  */
 int find_victim_page(struct mm_struct *mm, addr_t *retpgn, struct pcb_t **ret_owner)
 {
-    static struct pgn_t *clock_hand = NULL;
     struct pgn_t *current;
     int found = 0;
     
-    if (clock_hand == NULL) {
-        clock_hand = mm->fifo_pgn;
+    if (mm->clock_hand == NULL) {
+        mm->clock_hand = mm->fifo_pgn;
     }
     
-    if (clock_hand == NULL) {
+    if (mm->clock_hand == NULL) {
         printf("ERROR: No pages in clock list\n");
         return -1;
     }
     
-    current = clock_hand;
+    current = mm->clock_hand;
     struct pgn_t *start = current;
     
     printf("\n=== CLOCK Algorithm Searching (List length: ");
@@ -871,10 +892,10 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn, struct pcb_t **ret_ow
             
             if (prev == NULL) {
                 mm->fifo_pgn = current->pg_next;
-                clock_hand = (current->pg_next != NULL) ? current->pg_next : mm->fifo_pgn;
+                mm->clock_hand = (current->pg_next != NULL) ? current->pg_next : mm->fifo_pgn;
             } else {
                 prev->pg_next = current->pg_next;
-                clock_hand = (current->pg_next != NULL) ? current->pg_next : mm->fifo_pgn;
+                mm->clock_hand = (current->pg_next != NULL) ? current->pg_next : mm->fifo_pgn;
             }
             
             free(current);
@@ -889,6 +910,8 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn, struct pcb_t **ret_ow
         if (current == NULL) {
             current = mm->fifo_pgn;
         }
+
+        mm->clock_hand = current;
         
     } while (current != start && !found);
     
@@ -899,7 +922,7 @@ int find_victim_page(struct mm_struct *mm, addr_t *retpgn, struct pcb_t **ret_ow
         *ret_owner = current->owner;
         
         mm->fifo_pgn = current->pg_next;
-        clock_hand = (current->pg_next != NULL) ? current->pg_next : mm->fifo_pgn;
+        mm->clock_hand = (current->pg_next != NULL) ? current->pg_next : mm->fifo_pgn;
         free(current);
         found = 1;
     }

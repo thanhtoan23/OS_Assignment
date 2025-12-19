@@ -190,4 +190,17 @@ int print_list_vma(struct vm_area_struct *rg);
 
 int print_list_pgn(struct pgn_t *ip);
 int print_pgtbl(struct pcb_t *ip, addr_t start, addr_t end);
+
+/* TLB prototypes */
+struct tlb_t* tlb_init();
+int tlb_insert(struct tlb_t* tlb, addr_t vpn, addr_t fpn, uint32_t pid, 
+               uint8_t dirty, uint8_t referenced);
+int tlb_lookup(struct tlb_t* tlb, addr_t vpn, uint32_t pid, addr_t* fpn);
+int tlb_invalidate_entry(struct tlb_t* tlb, addr_t vpn, uint32_t pid);
+int tlb_invalidate_process(struct tlb_t* tlb, uint32_t pid);
+int tlb_set_dirty(struct tlb_t* tlb, addr_t vpn, uint32_t pid);
+int tlb_set_referenced(struct tlb_t* tlb, addr_t vpn, uint32_t pid);
+void tlb_get_stats(struct tlb_t* tlb, int* hits, int* misses, float* hit_rate);
+void tlb_dump(struct tlb_t* tlb);
+void tlb_free(struct tlb_t* tlb);
 #endif

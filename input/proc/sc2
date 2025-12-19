@@ -1,6 +1,11 @@
-15 5
+15 10
 alloc 4000 2
+alloc 8000 1
 write 25 2 4112
 calc
+write 35 1 0
+calc
 read 2 4112 3
+read 1 0 4
+free 1
 free 2

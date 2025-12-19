@@ -159,76 +159,66 @@ static addr_t *__get_pte_ptr(struct mm_struct *mm, addr_t pgn, int alloc) {
     return &pt_table[pt_idx];
 }
 
-/*
- * pte_set_swap - Set PTE entry for swapped page
- * Hàm này được gọi khi một trang bị swap out
- * Dirty bit được clear vì trang đã được ghi xuống swap
- */
+/* pte_set_swap - Set PTE entry for swapped page */
 int pte_set_swap(struct pcb_t *owner, addr_t pgn, int swptyp, addr_t swpoff) {
-  pthread_mutex_lock(&mm_lock);
-  
-  addr_t *pte = __get_pte_ptr(owner->mm, pgn, 1);
-  
-  if (pte == NULL) {
-      pthread_mutex_unlock(&mm_lock);
-      return -1;
-  }
-
-  printf(">>> pte_set_swap: PID=%d, pgn=%lu -> SWAP(fpn=%lu)\n",
-          owner->pid, pgn, swpoff);
-  
-  SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
-  SETBIT(*pte, PAGING_PTE_SWAPPED_MASK);
-  CLRBIT(*pte, PAGING_PTE_REFERENCED_MASK);
-  CLRBIT(*pte, PAGING_PTE_DIRTY_MASK); // Trang đã được ghi xuống swap -> clean
-  SETVAL(*pte, swptyp, PAGING_PTE_SWPTYP_MASK, PAGING_PTE_SWPTYP_LOBIT);
-  SETVAL(*pte, swpoff, PAGING_PTE_SWPOFF_MASK, PAGING_PTE_SWPOFF_LOBIT);
-
-  printf("New PTE value: 0x%08x (dirty=0)\n", (uint32_t)*pte);
-  
-  pthread_mutex_unlock(&mm_lock);
-  return 0;
+    pthread_mutex_lock(&mm_lock);
+    
+    addr_t *pte = __get_pte_ptr(owner->mm, pgn, 1);
+    if (pte == NULL) {
+        pthread_mutex_unlock(&mm_lock);
+        return -1;
+    }
+    
+    printf(">>> pte_set_swap: PID=%d, pgn=%lu -> SWAP(fpn=%lu)\n",
+            owner->pid, pgn, swpoff);
+    
+    /* Invalidate TLB entry for this page */
+    if (owner->krnl->tlb) {
+        tlb_invalidate_entry(owner->krnl->tlb, pgn, owner->pid);
+    }
+    
+    SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
+    SETBIT(*pte, PAGING_PTE_SWAPPED_MASK);
+    CLRBIT(*pte, PAGING_PTE_REFERENCED_MASK);
+    CLRBIT(*pte, PAGING_PTE_DIRTY_MASK);
+    SETVAL(*pte, swptyp, PAGING_PTE_SWPTYP_MASK, PAGING_PTE_SWPTYP_LOBIT);
+    SETVAL(*pte, swpoff, PAGING_PTE_SWPOFF_MASK, PAGING_PTE_SWPOFF_LOBIT);
+    
+    printf("New PTE value: 0x%08x (dirty=0)\n", (uint32_t)*pte);
+    
+    pthread_mutex_unlock(&mm_lock);
+    return 0;
 }
 
-/*
- * pte_set_fpn - Set PTE entry for on-line page
- * @owner: Process owner of the page
- * @pgn: Page number
- * @fpn: Frame number in RAM
- * @is_dirty: 1 if this is a NEW page (needs to be written to swap if evicted)
- *            0 if this page was just swapped in (clean copy exists in swap)
- * 
- * QUAN TRỌNG:
- * - Trang MỚI cấp phát (chưa từng có trong swap): dirty = 1
- * - Trang SWAP IN (đã có bản sao trong swap): dirty = 0
- */
+/* pte_set_fpn - Set PTE entry for on-line page */
 int pte_set_fpn(struct pcb_t *owner, addr_t pgn, addr_t fpn, int is_dirty) {
-  pthread_mutex_lock(&mm_lock);
-  addr_t *pte = __get_pte_ptr(owner->mm, pgn, 1);
-  if (pte == NULL) {
-      pthread_mutex_unlock(&mm_lock);
-      return -1;
-  }
-
-  printf(">>> pte_set_fpn: PID=%d, pgn=%lu -> RAM(fpn=%lu), dirty=%d\n",
-          owner->pid, pgn, fpn, is_dirty);
-  
-  SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
-  CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
-  SETBIT(*pte, PAGING_PTE_REFERENCED_MASK);
-  SETVAL(*pte, fpn, PAGING_PTE_FPN_MASK, PAGING_PTE_FPN_LOBIT);
-  
-  // Set dirty bit dựa trên tham số
-  if (is_dirty) {
-    SETBIT(*pte, PAGING_PTE_DIRTY_MASK);
-  } else {
-    CLRBIT(*pte, PAGING_PTE_DIRTY_MASK);
-  }
-  
-  printf("New PTE value: 0x%08x (dirty=%d)\n", (uint32_t)*pte, is_dirty);
-  
-  pthread_mutex_unlock(&mm_lock);
-  return 0;
+    pthread_mutex_lock(&mm_lock);
+    addr_t *pte = __get_pte_ptr(owner->mm, pgn, 1);
+    if (pte == NULL) {
+        pthread_mutex_unlock(&mm_lock);
+        return -1;
+    }
+    
+    printf(">>> pte_set_fpn: PID=%d, pgn=%lu -> RAM(fpn=%lu), dirty=%d\n",
+            owner->pid, pgn, fpn, is_dirty);
+    
+    /* Don't invalidate TLB here - we want to keep the entry if it exists */
+    
+    SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
+    CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
+    SETBIT(*pte, PAGING_PTE_REFERENCED_MASK);
+    SETVAL(*pte, fpn, PAGING_PTE_FPN_MASK, PAGING_PTE_FPN_LOBIT);
+    
+    if (is_dirty) {
+        SETBIT(*pte, PAGING_PTE_DIRTY_MASK);
+    } else {
+        CLRBIT(*pte, PAGING_PTE_DIRTY_MASK);
+    }
+    
+    printf("New PTE value: 0x%08x (dirty=%d)\n", (uint32_t)*pte, is_dirty);
+    
+    pthread_mutex_unlock(&mm_lock);
+    return 0;
 }
 
 /* Get PTE page table entry */
@@ -260,23 +250,105 @@ int pte_set_entry(struct pcb_t *caller, addr_t pgn, uint32_t pte_val) {
     return 0;
 }
 
-/*
- * vmap_pgd_memset - map a range of page at aligned address
- * [cite: 749, 750]
- */
-int vmap_pgd_memset(struct pcb_t *caller, addr_t addr, int pgnum) {
-  /* Emulate page directory working without real allocation (for sparse testing) */
-  int i;
-  addr_t pgn_start = PAGING64_PGN(addr);
-  
-  for(i = 0; i < pgnum; i++) {
-      // Just ensure the directories exist
-      pthread_mutex_lock(&mm_lock);
-      __get_pte_ptr(caller->mm, pgn_start + i, 1);
-      pthread_mutex_unlock(&mm_lock);
-  }
 
-  return 0;
+/**
+ * vmap_pgd_memset - Map a range of virtual pages into page table structure without physical allocation
+ * 
+ * @caller: Process control block of the calling process
+ * @addr:   Starting virtual address (must be page-aligned)
+ * @pgnum:  Number of pages to map
+ * 
+ * Return: 0 on success, -1 on error
+ * 
+ * Description:
+ * This function emulates page directory/page table creation for a range of virtual pages
+ * without actually allocating physical frames. It's used for:
+ * 1. Testing sparse virtual memory allocation in 64-bit address space
+ * 2. Pre-populating page table structures for large memory regions
+ * 3. Supporting lazy allocation mechanisms
+ * 
+ * The function ensures that all necessary page table levels (PGD, P4D, PUD, PMD, PT)
+ * exist for the specified virtual address range. If they don't exist, they are created.
+ * No physical frames are allocated - PTE entries remain with PRESENT=0.
+ * 
+ * [Cite: 749, 750 in the assignment document]
+ */
+int vmap_pgd_memset(struct pcb_t *caller, addr_t addr, int pgnum)
+{
+    /* Validate input parameters */
+    if (caller == NULL) {
+        printf("ERROR vmap_pgd_memset: caller is NULL\n");
+        return -1;
+    }
+    
+    if (caller->mm == NULL) {
+        printf("ERROR vmap_pgd_memset: caller->mm is NULL (PID=%d)\n", caller->pid);
+        return -1;
+    }
+    
+    if (pgnum <= 0) {
+        printf("ERROR vmap_pgd_memset: invalid pgnum=%d (must be >0)\n", pgnum);
+        return -1;
+    }
+    
+    /* Check address alignment (must be page-aligned) */
+    if (addr % PAGING64_PAGESZ != 0) {
+        printf("WARNING vmap_pgd_memset: address 0x%lx not page-aligned, aligning...\n", addr);
+        addr = addr & ~(PAGING64_PAGESZ - 1);  /* Align down to page boundary */
+    }
+    
+    /* Calculate starting page number */
+    addr_t pgn_start = PAGING64_PGN(addr);
+    
+    printf(">>> vmap_pgd_memset: PID=%d, start_addr=0x%lx, start_pgn=%lu, num_pages=%d\n",
+           caller->pid, addr, pgn_start, pgnum);
+    
+    /* For each page in the range, ensure page table structure exists */
+    for (int i = 0; i < pgnum; i++) {
+        addr_t current_pgn = pgn_start + i;
+        
+        /* Lock to protect concurrent access to page tables */
+        pthread_mutex_lock(&mm_lock);
+        
+        /* Get PTE pointer, creating missing page table levels if needed (alloc=1) */
+        addr_t *pte_ptr = __get_pte_ptr(caller->mm, current_pgn, 1);
+        
+        if (pte_ptr == NULL) {
+            /* This should not happen if __get_pte_ptr succeeds with alloc=1 */
+            printf("ERROR vmap_pgd_memset: Failed to get/create PTE for pgn=%lu\n", current_pgn);
+            pthread_mutex_unlock(&mm_lock);
+            return -1;
+        }
+        
+        /* Verify that PTE is initialized to 0 (not present, not swapped) */
+        if (*pte_ptr != 0) {
+            printf("WARNING vmap_pgd_memset: PTE for pgn=%lu already initialized (value=0x%lx)\n",
+                   current_pgn, *pte_ptr);
+        } else {
+            /* Optionally, we could set some metadata bits here if needed */
+            /* For example: mark as reserved but not present */
+            /* *pte_ptr = PAGING_PTE_RESERVED_MASK; */
+        }
+        
+        pthread_mutex_unlock(&mm_lock);
+        
+        /* Progress indicator for large mappings (optional) */
+        if ((i + 1) % 1000 == 0) {
+            printf("  Progress: %d/%d pages mapped...\n", i + 1, pgnum);
+        }
+    }
+    
+    /* Track statistics for debugging/optimization */
+#ifdef VMAP_STATISTICS
+    caller->mm->vmap_count += pgnum;
+    printf("Statistics: PID=%d total vmap pages=%lu\n", 
+           caller->pid, caller->mm->vmap_count);
+#endif
+    
+    printf("<<< vmap_pgd_memset: Successfully mapped %d pages (PID=%d)\n", 
+           pgnum, caller->pid);
+    
+    return 0;
 }
 
 /*
@@ -575,6 +647,7 @@ int init_mm(struct mm_struct *mm, struct pcb_t *caller)
 
   mm->mmap = vma0;
   mm->fifo_pgn = NULL;
+  mm->clock_hand = NULL;
   
   return 0;
 }
@@ -728,12 +801,11 @@ int print_list_vma(struct vm_area_struct *ivma)
 
 int print_list_pgn(struct pgn_t *ip)
 {
-  printf("print_list_pgn: ");
+  printf("print_list_pgn: \n");
   if (ip == NULL) { 
     printf("NULL list\n"); 
     return -1; 
   }
-  printf("\n");
 
   struct pgn_t *curr = ip;
   int count = 0;

@@ -183,7 +183,7 @@ static void read_config(const char * path) {
 	 *        MEM_RAM_SZ MEM_SWP0_SZ MEM_SWP1_SZ MEM_SWP2_SZ MEM_SWP3_SZ
 	*/
 	fscanf(file, "%d\n", &memramsz);
-	printf("Dung luong Ram: %d \n", memramsz);
+	printf("RAM size: %d \n", memramsz);
 	for(sit = 0; sit < PAGING_MAX_MMSWP; sit++)
 		fscanf(file, "%d", &(memswpsz[sit])); 
 
@@ -267,9 +267,8 @@ int main(int argc, char * argv[]) {
     int rdmflag = 1;
     struct memphy_struct *mram = malloc(sizeof(struct memphy_struct));
     init_memphy(mram, memramsz, rdmflag);
-
+    
     /* 2. Khởi tạo mảng các thiết bị SWAP */
-    // Thay vì dùng mảng tĩnh, ta dùng mảng các con trỏ để dễ quản lý trong krnl_t
     struct memphy_struct **mswp = malloc(PAGING_MAX_MMSWP * sizeof(struct memphy_struct *));
     
     int sit;
@@ -278,11 +277,14 @@ int main(int argc, char * argv[]) {
             mswp[sit] = malloc(sizeof(struct memphy_struct));
             init_memphy(mswp[sit], memswpsz[sit], rdmflag);
         } else {
-            mswp[sit] = NULL; // Đánh dấu vùng swap không sử dụng
+            mswp[sit] = NULL;
         }
     }
-
-    /* 3. Khởi tạo cấu trúc đối số cho Loader */
+    
+    /* 3. Khởi tạo TLB */
+    struct tlb_t *tlb = tlb_init();
+    
+    /* 4. Khởi tạo cấu trúc đối số cho Loader */
     struct mmpaging_ld_args *mm_ld_args = malloc(sizeof(struct mmpaging_ld_args));
     
     // Khởi tạo Kernel MM nếu chưa có
@@ -290,12 +292,13 @@ int main(int argc, char * argv[]) {
         os.mm = malloc(sizeof(struct mm_struct));
         init_mm(os.mm, NULL);
     }
-
+    
     // Gán các tài nguyên vào Kernel hệ thống (os)
     os.mram = mram;
     os.mswp = mswp;
-    os.active_mswp_id = 0; // Bắt đầu Round Robin từ Swap 0
-
+    os.active_mswp_id = 0;
+    os.tlb = tlb;  /* <--- ADD TLB TO KERNEL */
+    
     // Truyền tham số cho loader thread
     mm_ld_args->timer_id = ld_event;
     mm_ld_args->mram = mram;
@@ -324,6 +327,21 @@ int main(int argc, char * argv[]) {
 	pthread_join(ld, NULL);
 
 #ifdef MM_PAGING
+    /* Print TLB statistics before cleanup */
+    if (os.tlb) {
+        int hits, misses;
+        float hit_rate;
+        tlb_get_stats(os.tlb, &hits, &misses, &hit_rate);
+        printf("\n===== TLB FINAL STATISTICS =====\n");
+        printf("Total Hits: %d\n", hits);
+        printf("Total Misses: %d\n", misses);
+        printf("Hit Rate: %.2f%%\n", hit_rate);
+        printf("==============================\n\n");
+        
+        tlb_dump(os.tlb);
+        tlb_free(os.tlb);
+    }
+    
     free(os.mram);
     for(int i = 0; i < PAGING_MAX_MMSWP; i++) {
         if (os.mswp[i] != NULL) free(os.mswp[i]);

@@ -17,6 +17,11 @@
 #define PAGING_MAX_MMSWP 4 /* max number of supported swapped space */
 #define PAGING_MAX_SYMTBL_SZ 30
 
+/* TLB Configuration */
+#define TLB_SIZE 64        /* Số lượng entry trong TLB */
+#define TLB_ENTRY_INVALID 0
+#define TLB_ENTRY_VALID   1
+
 /* 
  * @bksysnet: in long address mode of 64bit or original 32bit
  * the address type need to be redefined
@@ -30,8 +35,6 @@
 
 typedef char BYTE;
 typedef ADDR_TYPE addr_t;
-//typedef unsigned int uint32_t;
-
 
 /* 
  * @bksysnet: the format string need to be redefined
@@ -45,6 +48,27 @@ typedef ADDR_TYPE addr_t;
 #define FORMATX_ADDR "%08x"
 #endif
 
+/* TLB Entry Structure (LRU implementation) */
+struct tlb_entry_t {
+    addr_t vpn;           /* Virtual Page Number */
+    addr_t fpn;           /* Frame Physical Number */
+    uint8_t valid;        /* Valid bit */
+    uint8_t dirty;        /* Dirty bit */
+    uint8_t referenced;   /* Referenced bit */
+    uint32_t pid;         /* Process ID for multi-process TLB */
+    uint64_t last_used;   /* Timestamp for LRU - incremented on each access */
+    struct tlb_entry_t *next; /* For chaining in hash table */
+};
+
+/* TLB Structure with LRU support */
+struct tlb_t {
+    struct tlb_entry_t *entries[TLB_SIZE];  /* Hash table chaining */
+    int hits;
+    int misses;
+    int size;
+    uint64_t access_counter; /* Global counter for LRU timestamp */
+};
+
 struct pgn_t{
    addr_t pgn;
    struct pcb_t *owner;
@@ -57,7 +81,6 @@ struct pgn_t{
 struct vm_rg_struct {
    addr_t rg_start;
    addr_t rg_end;
-
    struct vm_rg_struct *rg_next;
 };
 
@@ -68,12 +91,7 @@ struct vm_area_struct {
    unsigned long vm_id;
    addr_t vm_start;
    addr_t vm_end;
-
    addr_t sbrk;
-/*
- * Derived field
- * unsigned long vm_limit = vm_end - vm_start
- */
    struct mm_struct *vm_mm;
    struct vm_rg_struct *vm_freerg_list;
    struct vm_area_struct *vm_next;
@@ -83,10 +101,6 @@ struct vm_area_struct {
  * Memory management struct
  */
 struct mm_struct {
- /* TODO: The structure of page diractory need to be justify
-  *       as your design. The single point is draft to avoid
-  *       compiler noisy only, this design need to be revised
-  */
 #ifdef MM64
    addr_t *pgd;
    addr_t *p4d;
@@ -102,8 +116,8 @@ struct mm_struct {
    /* Currently we support a fixed number of symbol */
    struct vm_rg_struct symrgtbl[PAGING_MAX_SYMTBL_SZ];
 
-   /* list of free page */
    struct pgn_t *fifo_pgn;
+   struct pgn_t *clock_hand;
 };
 
 /*
@@ -112,21 +126,14 @@ struct mm_struct {
 struct framephy_struct { 
    addr_t fpn;
    struct framephy_struct *fp_next;
-
-   /* Resereed for tracking allocated framed */
    struct mm_struct* owner;
 };
 
 struct memphy_struct {
-   /* Basic field of data and size */
    BYTE *storage;
    int maxsz;
-   
-   /* Sequential device fields */ 
    int rdmflg;
    int cursor;
-
-   /* Management structure */
    struct framephy_struct *free_fp_list;
    struct framephy_struct *used_fp_list;
 };

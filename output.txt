@@ -1,9 +1,9 @@
-Dung luong Ram: 4096 
+RAM size: 40960 
 Time slot 0
 ld_routine
 Time slot   1
 	Loaded a process at input/proc/sc2, PID: 1 PRIO: 15
-	CPU 0: Dispatched process  1
+	CPU 2: Dispatched process  1
 No free regions available in vma 0
 ALLOC PAGE RANGE, PID: 1
 Page num 0 -> Address: 0 
@@ -23,26 +23,374 @@ BEST FIT allocated: [0-4096] (size=4096)
 liballoc:234
 Page Table Dump for PID 1:
 print_pgtbl:
- PDG=0000780fa8000bd0 P4G=0000780fa8001be0 PUD=0000780fa8002bf0 PMD=0000780fa8003c00
+ PDG=00007d9758000bd0 P4G=00007d9758001be0 PUD=00007d9758002bf0 PMD=00007d9758003c00
   00000: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
 Count: 1
 	Loaded a process at input/proc/sc2, PID: 2 PRIO: 15
 	Loaded a process at input/proc/sc2, PID: 3 PRIO: 15
+	Loaded a process at input/proc/sc2, PID: 4 PRIO: 15
+	Loaded a process at input/proc/sc2, PID: 5 PRIO: 15
+	Loaded a process at input/proc/sc2, PID: 6 PRIO: 15
+	Loaded a process at input/proc/sc2, PID: 7 PRIO: 15
+	Loaded a process at input/proc/sc2, PID: 8 PRIO: 15
 Time slot   2
-	CPU 1: Dispatched process  2
 No free regions available in vma 0
-WRITE: pid: 1
+ALLOC PAGE RANGE, PID: 1
+Page num 1 -> Address: 4096 
+>>> pte_set_fpn: PID=1, pgn=1 -> RAM(fpn=1), dirty=1
+New PTE value: 0xb0000001 (dirty=1)
+===== Added to FIFO: pgn=1 (PID=1) =====
+print_list_pgn: 
+  va[0] (PID=1)
+  va[1] (PID=1)
+Total: 2 pages
+
+>>> pte_set_fpn: PID=1, pgn=2 -> RAM(fpn=2), dirty=1
+New PTE value: 0xb0000002 (dirty=1)
+===== Added to FIFO: pgn=2 (PID=1) =====
+print_list_pgn: 
+  va[0] (PID=1)
+  va[1] (PID=1)
+  va[2] (PID=1)
+Total: 3 pages
+
+BEST FIT search for size=8192 in vma 0:
+  Checking region [4096-12288] (size=8192)
+    -> New best fit (size=8192)
+BEST FIT selected: [4096-12288] (size=8192)
+  Region fully used, removing from free list
+BEST FIT allocated: [4096-12288] (size=8192)
+	CPU 1: Dispatched process  2
+liballoc:234
+Page Table Dump for PID 1:
+print_pgtbl:
+ PDG=00007d9758000bd0 P4G=00007d9758001be0 PUD=00007d9758002bf0 PMD=00007d9758003c00
+  00000: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00001: [b0000001] (FPN: 1) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [b0000002] (FPN: 2) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 3
+	CPU 0: Dispatched process  3
+No free regions available in vma 0
 ALLOC PAGE RANGE, PID: 2
+Page num 0 -> Address: 0 
+>>> pte_set_fpn: PID=2, pgn=0 -> RAM(fpn=3), dirty=1
+New PTE value: 0xb0000003 (dirty=1)
+===== Added to FIFO: pgn=0 (PID=2) =====
+print_list_pgn: 
+  va[0] (PID=1)
+  va[1] (PID=1)
+  va[2] (PID=1)
+  va[0] (PID=2)
+Total: 4 pages
+
+BEST FIT search for size=4096 in vma 0:
+  Checking region [0-4096] (size=4096)
+    -> New best fit (size=4096)
+BEST FIT selected: [0-4096] (size=4096)
+  Region fully used, removing from free list
+BEST FIT allocated: [0-4096] (size=4096)
+liballoc:234
+Page Table Dump for PID 2:
+print_pgtbl:
+ PDG=00007d975c000bd0 P4G=00007d975c001be0 PUD=00007d975c002bf0 PMD=00007d975c003c00
+  00000: [b0000003] (FPN: 3) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 1
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 3
+Page num 0 -> Address: 0 
+>>> pte_set_fpn: PID=3, pgn=0 -> RAM(fpn=4), dirty=1
+New PTE value: 0xb0000004 (dirty=1)
+===== Added to FIFO: pgn=0 (PID=3) =====
+print_list_pgn: 
+  va[0] (PID=1)
+  va[1] (PID=1)
+  va[2] (PID=1)
+  va[0] (PID=2)
+  va[0] (PID=3)
+Total: 5 pages
+
+BEST FIT search for size=4096 in vma 0:
+  Checking region [0-4096] (size=4096)
+    -> New best fit (size=4096)
+BEST FIT selected: [0-4096] (size=4096)
+  Region fully used, removing from free list
+BEST FIT allocated: [0-4096] (size=4096)
+liballoc:234
+Page Table Dump for PID 3:
+print_pgtbl:
+ PDG=00007d97600110c0 P4G=00007d97600120d0 PUD=00007d97600130e0 PMD=00007d97600140f0
+  00000: [b0000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 1
+Time slot   3
+	CPU 2: Put process  1 to run queue
+	CPU 2: Dispatched process  4
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 4
+Page num 0 -> Address: 0 
+>>> pte_set_fpn: PID=4, pgn=0 -> RAM(fpn=5), dirty=1
+New PTE value: 0xb0000005 (dirty=1)
+===== Added to FIFO: pgn=0 (PID=4) =====
+print_list_pgn: 
+  va[0] (PID=1)
+  va[1] (PID=1)
+  va[2] (PID=1)
+  va[0] (PID=2)
+  va[0] (PID=3)
+  va[0] (PID=4)
+Total: 6 pages
+
+BEST FIT search for size=4096 in vma 0:
+  Checking region [0-4096] (size=4096)
+    -> New best fit (size=4096)
+BEST FIT selected: [0-4096] (size=4096)
+  Region fully used, removing from free list
+BEST FIT allocated: [0-4096] (size=4096)
+liballoc:234
+Page Table Dump for PID 4:
+print_pgtbl:
+ PDG=00007d9758005d00 P4G=00007d9758006d10 PUD=00007d9758007d20 PMD=00007d9758008d30
+  00000: [b0000005] (FPN: 5) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 1
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 2
+Page num 1 -> Address: 4096 
+>>> pte_set_fpn: PID=2, pgn=1 -> RAM(fpn=6), dirty=1
+New PTE value: 0xb0000006 (dirty=1)
+===== Added to FIFO: pgn=1 (PID=2) =====
+print_list_pgn: 
+  va[0] (PID=1)
+  va[1] (PID=1)
+  va[2] (PID=1)
+  va[0] (PID=2)
+  va[0] (PID=3)
+  va[0] (PID=4)
+  va[1] (PID=2)
+Total: 7 pages
+
+>>> pte_set_fpn: PID=2, pgn=2 -> RAM(fpn=7), dirty=1
+New PTE value: 0xb0000007 (dirty=1)
+===== Added to FIFO: pgn=2 (PID=2) =====
+print_list_pgn: 
+  va[0] (PID=1)
+  va[1] (PID=1)
+  va[2] (PID=1)
+  va[0] (PID=2)
+  va[0] (PID=3)
+  va[0] (PID=4)
+  va[1] (PID=2)
+  va[2] (PID=2)
+Total: 8 pages
+
+BEST FIT search for size=8192 in vma 0:
+  Checking region [4096-12288] (size=8192)
+    -> New best fit (size=8192)
+BEST FIT selected: [4096-12288] (size=8192)
+  Region fully used, removing from free list
+BEST FIT allocated: [4096-12288] (size=8192)
+liballoc:234
+Page Table Dump for PID 2:
+print_pgtbl:
+ PDG=00007d975c000bd0 P4G=00007d975c001be0 PUD=00007d975c002bf0 PMD=00007d975c003c00
+  00000: [b0000003] (FPN: 3) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00001: [b0000006] (FPN: 6) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [b0000007] (FPN: 7) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 3
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 3
+Page num 1 -> Address: 4096 
+>>> pte_set_fpn: PID=3, pgn=1 -> RAM(fpn=8), dirty=1
+New PTE value: 0xb0000008 (dirty=1)
+===== Added to FIFO: pgn=1 (PID=3) =====
+print_list_pgn: 
+  va[0] (PID=1)
+  va[1] (PID=1)
+  va[2] (PID=1)
+  va[0] (PID=2)
+  va[0] (PID=3)
+  va[0] (PID=4)
+  va[1] (PID=2)
+  va[2] (PID=2)
+  va[1] (PID=3)
+Total: 9 pages
+
+>>> pte_set_fpn: PID=3, pgn=2 -> RAM(fpn=9), dirty=1
+New PTE value: 0xb0000009 (dirty=1)
+===== Added to FIFO: pgn=2 (PID=3) =====
+print_list_pgn: 
+  va[0] (PID=1)
+  va[1] (PID=1)
+  va[2] (PID=1)
+  va[0] (PID=2)
+  va[0] (PID=3)
+  va[0] (PID=4)
+  va[1] (PID=2)
+  va[2] (PID=2)
+  va[1] (PID=3)
+  va[2] (PID=3)
+Total: 10 pages
+
+BEST FIT search for size=8192 in vma 0:
+  Checking region [4096-12288] (size=8192)
+    -> New best fit (size=8192)
+BEST FIT selected: [4096-12288] (size=8192)
+  Region fully used, removing from free list
+BEST FIT allocated: [4096-12288] (size=8192)
+liballoc:234
+Page Table Dump for PID 3:
+print_pgtbl:
+ PDG=00007d97600110c0 P4G=00007d97600120d0 PUD=00007d97600130e0 PMD=00007d97600140f0
+  00000: [b0000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00001: [b0000008] (FPN: 8) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [b0000009] (FPN: 9) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 3
+Time slot   4
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 4
 RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
 
-=== CLOCK Algorithm Searching (List length: 1) ===
+=== CLOCK Algorithm Searching (List length: 10) ===
 Checking pgn=0 (PID=1): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=1): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=2 (PID=1): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=0 (PID=2): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=0 (PID=3): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=0 (PID=4): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=2): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=2 (PID=2): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=3): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=2 (PID=3): present=1, referenced=1
   -> Giving second chance, clearing reference bit
 All pages had ref=1, taking first page as victim
 Selected victim: pgn=0 (PID=1)
 Selected VICTIM: PID=1, pgn=0, fpn=0, pte=0x90000000, dirty=1
-ALL SWAP DEVICES ARE FULL!\nERROR: Cannot allocate pages - swap full and insufficient clean pages
-Out of memory
+Free SWAP frame obtained at SWAP 0: swpfpn=0
+SWAP OUT: RAM(0) -> SWAP 0(0) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=0) -> SWAP[0](fpn=0)
+	CPU 1: Put process  2 to run queue
+	CPU 1: Dispatched process  5
+	CPU 0: Put process  3 to run queue
+	CPU 0: Dispatched process  6
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:0 -> SWAP:0)
+>>> pte_set_swap: PID=1, pgn=0 -> SWAP(fpn=0)
+New PTE value: 0xc0000000 (dirty=0)
+Updated VICTIM PTE (PID=1, pgn=0) to point to SWAP 0(0)
+Victim frame 0 now available for new page allocation
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 9) ===
+Checking pgn=1 (PID=1): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=1 (PID=1)
+Selected VICTIM: PID=1, pgn=1, fpn=1, pte=0x90000001, dirty=1
+Free SWAP frame obtained at SWAP 1: swpfpn=0
+SWAP OUT: RAM(1) -> SWAP 1(0) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=1) -> SWAP[1](fpn=0)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[1] (RAM:1 -> SWAP:0)
+>>> pte_set_swap: PID=1, pgn=1 -> SWAP(fpn=0)
+New PTE value: 0xc0000001 (dirty=0)
+Updated VICTIM PTE (PID=1, pgn=1) to point to SWAP 1(0)
+Victim frame 1 now available for new page allocation
+Page num 1 -> Address: 4096 
+>>> pte_set_fpn: PID=4, pgn=1 -> RAM(fpn=0), dirty=1
+New PTE value: 0xb0000000 (dirty=1)
+===== Added to FIFO: pgn=1 (PID=4) =====
+print_list_pgn: 
+  va[2] (PID=1)
+  va[0] (PID=2)
+  va[0] (PID=3)
+  va[0] (PID=4)
+  va[1] (PID=2)
+  va[2] (PID=2)
+  va[1] (PID=3)
+  va[2] (PID=3)
+  va[1] (PID=4)
+Total: 9 pages
+
+>>> pte_set_fpn: PID=4, pgn=2 -> RAM(fpn=1), dirty=1
+New PTE value: 0xb0000001 (dirty=1)
+===== Added to FIFO: pgn=2 (PID=4) =====
+print_list_pgn: 
+  va[2] (PID=1)
+  va[0] (PID=2)
+  va[0] (PID=3)
+  va[0] (PID=4)
+  va[1] (PID=2)
+  va[2] (PID=2)
+  va[1] (PID=3)
+  va[2] (PID=3)
+  va[1] (PID=4)
+  va[2] (PID=4)
+Total: 10 pages
+
+BEST FIT search for size=8192 in vma 0:
+  Checking region [4096-12288] (size=8192)
+    -> New best fit (size=8192)
+BEST FIT selected: [4096-12288] (size=8192)
+  Region fully used, removing from free list
+BEST FIT allocated: [4096-12288] (size=8192)
+liballoc:234
+Page Table Dump for PID 4:
+print_pgtbl:
+ PDG=00007d9758005d00 P4G=00007d9758006d10 PUD=00007d9758007d20 PMD=00007d9758008d30
+  00000: [90000005] (FPN: 5) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+  00001: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [b0000001] (FPN: 1) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 3
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 5
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=2 (PID=1): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=2 (PID=1)
+Selected VICTIM: PID=1, pgn=2, fpn=2, pte=0x90000002, dirty=1
+Free SWAP frame obtained at SWAP 0: swpfpn=1
+SWAP OUT: RAM(2) -> SWAP 0(1) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=2) -> SWAP[0](fpn=1)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:2 -> SWAP:1)
+>>> pte_set_swap: PID=1, pgn=2 -> SWAP(fpn=1)
+New PTE value: 0xc0000020 (dirty=0)
+Updated VICTIM PTE (PID=1, pgn=2) to point to SWAP 0(1)
+Victim frame 2 now available for new page allocation
+Page num 0 -> Address: 0 
+>>> pte_set_fpn: PID=5, pgn=0 -> RAM(fpn=2), dirty=1
+New PTE value: 0xb0000002 (dirty=1)
+===== Added to FIFO: pgn=0 (PID=5) =====
+print_list_pgn: 
+  va[0] (PID=2)
+  va[0] (PID=3)
+  va[0] (PID=4)
+  va[1] (PID=2)
+  va[2] (PID=2)
+  va[1] (PID=3)
+  va[2] (PID=3)
+  va[1] (PID=4)
+  va[2] (PID=4)
+  va[0] (PID=5)
+Total: 10 pages
+
 BEST FIT search for size=4096 in vma 0:
   Checking region [0-4096] (size=4096)
     -> New best fit (size=4096)
@@ -50,159 +398,2008 @@ BEST FIT selected: [0-4096] (size=4096)
   Region fully used, removing from free list
 BEST FIT allocated: [0-4096] (size=4096)
 liballoc:234
-Page Table Dump for PID 2:
-Page table not initialized.
+Page Table Dump for PID 5:
+print_pgtbl:
+ PDG=00007d975c005d00 P4G=00007d975c006d10 PUD=00007d975c007d20 PMD=00007d975c008d30
+  00000: [b0000002] (FPN: 2) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 1
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 6
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=0 (PID=2): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=0 (PID=2)
+Selected VICTIM: PID=2, pgn=0, fpn=3, pte=0x90000003, dirty=1
+Free SWAP frame obtained at SWAP 1: swpfpn=1
+SWAP OUT: RAM(3) -> SWAP 1(1) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=3) -> SWAP[1](fpn=1)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[1] (RAM:3 -> SWAP:1)
+>>> pte_set_swap: PID=2, pgn=0 -> SWAP(fpn=1)
+New PTE value: 0xc0000021 (dirty=0)
+Updated VICTIM PTE (PID=2, pgn=0) to point to SWAP 1(1)
+Victim frame 3 now available for new page allocation
+Page num 0 -> Address: 0 
+>>> pte_set_fpn: PID=6, pgn=0 -> RAM(fpn=3), dirty=1
+New PTE value: 0xb0000003 (dirty=1)
+===== Added to FIFO: pgn=0 (PID=6) =====
+print_list_pgn: 
+  va[0] (PID=3)
+  va[0] (PID=4)
+  va[1] (PID=2)
+  va[2] (PID=2)
+  va[1] (PID=3)
+  va[2] (PID=3)
+  va[1] (PID=4)
+  va[2] (PID=4)
+  va[0] (PID=5)
+  va[0] (PID=6)
+Total: 10 pages
+
+BEST FIT search for size=4096 in vma 0:
+  Checking region [0-4096] (size=4096)
+    -> New best fit (size=4096)
+BEST FIT selected: [0-4096] (size=4096)
+  Region fully used, removing from free list
+BEST FIT allocated: [0-4096] (size=4096)
+liballoc:234
+Page Table Dump for PID 6:
+print_pgtbl:
+ PDG=00007d97600161f0 P4G=00007d9760017200 PUD=00007d9760018210 PMD=00007d9760019220
+  00000: [b0000003] (FPN: 3) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 1
+Time slot   5
+	CPU 2: Put process  4 to run queue
+	CPU 2: Dispatched process  7
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 7
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=0 (PID=3): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=0 (PID=3)
+Selected VICTIM: PID=3, pgn=0, fpn=4, pte=0x90000004, dirty=1
+Free SWAP frame obtained at SWAP 0: swpfpn=2
+SWAP OUT: RAM(4) -> SWAP 0(2) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=4) -> SWAP[0](fpn=2)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:4 -> SWAP:2)
+>>> pte_set_swap: PID=3, pgn=0 -> SWAP(fpn=2)
+New PTE value: 0xc0000040 (dirty=0)
+Updated VICTIM PTE (PID=3, pgn=0) to point to SWAP 0(2)
+Victim frame 4 now available for new page allocation
+Page num 0 -> Address: 0 
+>>> pte_set_fpn: PID=7, pgn=0 -> RAM(fpn=4), dirty=1
+New PTE value: 0xb0000004 (dirty=1)
+===== Added to FIFO: pgn=0 (PID=7) =====
+print_list_pgn: 
+  va[0] (PID=4)
+  va[1] (PID=2)
+  va[2] (PID=2)
+  va[1] (PID=3)
+  va[2] (PID=3)
+  va[1] (PID=4)
+  va[2] (PID=4)
+  va[0] (PID=5)
+  va[0] (PID=6)
+  va[0] (PID=7)
+Total: 10 pages
+
+BEST FIT search for size=4096 in vma 0:
+  Checking region [0-4096] (size=4096)
+    -> New best fit (size=4096)
+BEST FIT selected: [0-4096] (size=4096)
+  Region fully used, removing from free list
+BEST FIT allocated: [0-4096] (size=4096)
+liballoc:234
+Page Table Dump for PID 7:
+print_pgtbl:
+ PDG=00007d975800adf0 P4G=00007d975800be00 PUD=00007d975800ce10 PMD=00007d975800de20
+  00000: [b0000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 1
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 5
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=0 (PID=4): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=0 (PID=4)
+Selected VICTIM: PID=4, pgn=0, fpn=5, pte=0x90000005, dirty=1
+Free SWAP frame obtained at SWAP 1: swpfpn=2
+SWAP OUT: RAM(5) -> SWAP 1(2) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=5) -> SWAP[1](fpn=2)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[1] (RAM:5 -> SWAP:2)
+>>> pte_set_swap: PID=4, pgn=0 -> SWAP(fpn=2)
+New PTE value: 0xc0000041 (dirty=0)
+Updated VICTIM PTE (PID=4, pgn=0) to point to SWAP 1(2)
+Victim frame 5 now available for new page allocation
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 9) ===
+Checking pgn=1 (PID=2): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=1 (PID=2)
+Selected VICTIM: PID=2, pgn=1, fpn=6, pte=0x90000006, dirty=1
+Free SWAP frame obtained at SWAP 0: swpfpn=3
+SWAP OUT: RAM(6) -> SWAP 0(3) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=6) -> SWAP[0](fpn=3)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:6 -> SWAP:3)
+>>> pte_set_swap: PID=2, pgn=1 -> SWAP(fpn=3)
+New PTE value: 0xc0000060 (dirty=0)
+Updated VICTIM PTE (PID=2, pgn=1) to point to SWAP 0(3)
+Victim frame 6 now available for new page allocation
+Page num 1 -> Address: 4096 
+>>> pte_set_fpn: PID=5, pgn=1 -> RAM(fpn=5), dirty=1
+New PTE value: 0xb0000005 (dirty=1)
+===== Added to FIFO: pgn=1 (PID=5) =====
+print_list_pgn: 
+  va[2] (PID=2)
+  va[1] (PID=3)
+  va[2] (PID=3)
+  va[1] (PID=4)
+  va[2] (PID=4)
+  va[0] (PID=5)
+  va[0] (PID=6)
+  va[0] (PID=7)
+  va[1] (PID=5)
+Total: 9 pages
+
+>>> pte_set_fpn: PID=5, pgn=2 -> RAM(fpn=6), dirty=1
+New PTE value: 0xb0000006 (dirty=1)
+===== Added to FIFO: pgn=2 (PID=5) =====
+print_list_pgn: 
+  va[2] (PID=2)
+  va[1] (PID=3)
+  va[2] (PID=3)
+  va[1] (PID=4)
+  va[2] (PID=4)
+  va[0] (PID=5)
+  va[0] (PID=6)
+  va[0] (PID=7)
+  va[1] (PID=5)
+  va[2] (PID=5)
+Total: 10 pages
+
+BEST FIT search for size=8192 in vma 0:
+  Checking region [4096-12288] (size=8192)
+    -> New best fit (size=8192)
+BEST FIT selected: [4096-12288] (size=8192)
+  Region fully used, removing from free list
+BEST FIT allocated: [4096-12288] (size=8192)
+liballoc:234
+Page Table Dump for PID 5:
+print_pgtbl:
+ PDG=00007d975c005d00 P4G=00007d975c006d10 PUD=00007d975c007d20 PMD=00007d975c008d30
+  00000: [b0000002] (FPN: 2) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00001: [b0000005] (FPN: 5) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [b0000006] (FPN: 6) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 3
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 6
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=2 (PID=2): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=2 (PID=2)
+Selected VICTIM: PID=2, pgn=2, fpn=7, pte=0x90000007, dirty=1
+Free SWAP frame obtained at SWAP 1: swpfpn=3
+SWAP OUT: RAM(7) -> SWAP 1(3) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=7) -> SWAP[1](fpn=3)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[1] (RAM:7 -> SWAP:3)
+>>> pte_set_swap: PID=2, pgn=2 -> SWAP(fpn=3)
+New PTE value: 0xc0000061 (dirty=0)
+Updated VICTIM PTE (PID=2, pgn=2) to point to SWAP 1(3)
+Victim frame 7 now available for new page allocation
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 9) ===
+Checking pgn=1 (PID=3): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=1 (PID=3)
+Selected VICTIM: PID=3, pgn=1, fpn=8, pte=0x90000008, dirty=1
+Free SWAP frame obtained at SWAP 0: swpfpn=4
+SWAP OUT: RAM(8) -> SWAP 0(4) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=8) -> SWAP[0](fpn=4)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:8 -> SWAP:4)
+>>> pte_set_swap: PID=3, pgn=1 -> SWAP(fpn=4)
+New PTE value: 0xc0000080 (dirty=0)
+Updated VICTIM PTE (PID=3, pgn=1) to point to SWAP 0(4)
+Victim frame 8 now available for new page allocation
+Page num 1 -> Address: 4096 
+>>> pte_set_fpn: PID=6, pgn=1 -> RAM(fpn=7), dirty=1
+New PTE value: 0xb0000007 (dirty=1)
+===== Added to FIFO: pgn=1 (PID=6) =====
+print_list_pgn: 
+  va[2] (PID=3)
+  va[1] (PID=4)
+  va[2] (PID=4)
+  va[0] (PID=5)
+  va[0] (PID=6)
+  va[0] (PID=7)
+  va[1] (PID=5)
+  va[2] (PID=5)
+  va[1] (PID=6)
+Total: 9 pages
+
+>>> pte_set_fpn: PID=6, pgn=2 -> RAM(fpn=8), dirty=1
+New PTE value: 0xb0000008 (dirty=1)
+===== Added to FIFO: pgn=2 (PID=6) =====
+print_list_pgn: 
+  va[2] (PID=3)
+  va[1] (PID=4)
+  va[2] (PID=4)
+  va[0] (PID=5)
+  va[0] (PID=6)
+  va[0] (PID=7)
+  va[1] (PID=5)
+  va[2] (PID=5)
+  va[1] (PID=6)
+  va[2] (PID=6)
+Total: 10 pages
+
+BEST FIT search for size=8192 in vma 0:
+  Checking region [4096-12288] (size=8192)
+    -> New best fit (size=8192)
+BEST FIT selected: [4096-12288] (size=8192)
+  Region fully used, removing from free list
+BEST FIT allocated: [4096-12288] (size=8192)
+liballoc:234
+Page Table Dump for PID 6:
+print_pgtbl:
+ PDG=00007d97600161f0 P4G=00007d9760017200 PUD=00007d9760018210 PMD=00007d9760019220
+  00000: [b0000003] (FPN: 3) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00001: [b0000007] (FPN: 7) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [b0000008] (FPN: 8) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 3
+Time slot   6
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 7
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=2 (PID=3): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=2 (PID=3)
+Selected VICTIM: PID=3, pgn=2, fpn=9, pte=0x90000009, dirty=1
+Free SWAP frame obtained at SWAP 1: swpfpn=4
+SWAP OUT: RAM(9) -> SWAP 1(4) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=9) -> SWAP[1](fpn=4)
+	CPU 1: Put process  5 to run queue
+	CPU 1: Dispatched process  8
+	CPU 0: Put process  6 to run queue
+	CPU 0: Dispatched process  1
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[1] (RAM:9 -> SWAP:4)
+>>> pte_set_swap: PID=3, pgn=2 -> SWAP(fpn=4)
+New PTE value: 0xc0000081 (dirty=0)
+Updated VICTIM PTE (PID=3, pgn=2) to point to SWAP 1(4)
+Victim frame 9 now available for new page allocation
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 9) ===
+Checking pgn=1 (PID=4): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=2 (PID=4): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=0 (PID=5): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=0 (PID=6): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=0 (PID=7): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=5): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=2 (PID=5): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=6): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=2 (PID=6): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+All pages had ref=1, taking first page as victim
+Selected victim: pgn=1 (PID=4)
+Selected VICTIM: PID=4, pgn=1, fpn=0, pte=0x90000000, dirty=1
+Free SWAP frame obtained at SWAP 0: swpfpn=5
+SWAP OUT: RAM(0) -> SWAP 0(5) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=0) -> SWAP[0](fpn=5)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:0 -> SWAP:5)
+>>> pte_set_swap: PID=4, pgn=1 -> SWAP(fpn=5)
+New PTE value: 0xc00000a0 (dirty=0)
+Updated VICTIM PTE (PID=4, pgn=1) to point to SWAP 0(5)
+Victim frame 0 now available for new page allocation
+Page num 1 -> Address: 4096 
+>>> pte_set_fpn: PID=7, pgn=1 -> RAM(fpn=9), dirty=1
+New PTE value: 0xb0000009 (dirty=1)
+===== Added to FIFO: pgn=1 (PID=7) =====
+print_list_pgn: 
+  va[2] (PID=4)
+  va[0] (PID=5)
+  va[0] (PID=6)
+  va[0] (PID=7)
+  va[1] (PID=5)
+  va[2] (PID=5)
+  va[1] (PID=6)
+  va[2] (PID=6)
+  va[1] (PID=7)
+Total: 9 pages
+
+>>> pte_set_fpn: PID=7, pgn=2 -> RAM(fpn=0), dirty=1
+New PTE value: 0xb0000000 (dirty=1)
+===== Added to FIFO: pgn=2 (PID=7) =====
+print_list_pgn: 
+  va[2] (PID=4)
+  va[0] (PID=5)
+  va[0] (PID=6)
+  va[0] (PID=7)
+  va[1] (PID=5)
+  va[2] (PID=5)
+  va[1] (PID=6)
+  va[2] (PID=6)
+  va[1] (PID=7)
+  va[2] (PID=7)
+Total: 10 pages
+
+BEST FIT search for size=8192 in vma 0:
+  Checking region [4096-12288] (size=8192)
+    -> New best fit (size=8192)
+BEST FIT selected: [4096-12288] (size=8192)
+  Region fully used, removing from free list
+BEST FIT allocated: [4096-12288] (size=8192)
+liballoc:234
+Page Table Dump for PID 7:
+print_pgtbl:
+ PDG=00007d975800adf0 P4G=00007d975800be00 PUD=00007d975800ce10 PMD=00007d975800de20
+  00000: [90000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+  00001: [b0000009] (FPN: 9) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 3
+No free regions available in vma 0
+ALLOC PAGE RANGE, PID: 8
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=2 (PID=4): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=2 (PID=4)
+Selected VICTIM: PID=4, pgn=2, fpn=1, pte=0x90000001, dirty=1
+Free SWAP frame obtained at SWAP 1: swpfpn=5
+SWAP OUT: RAM(1) -> SWAP 1(5) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=1) -> SWAP[1](fpn=5)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[1] (RAM:1 -> SWAP:5)
+>>> pte_set_swap: PID=4, pgn=2 -> SWAP(fpn=5)
+New PTE value: 0xc00000a1 (dirty=0)
+Updated VICTIM PTE (PID=4, pgn=2) to point to SWAP 1(5)
+Victim frame 1 now available for new page allocation
+Page num 0 -> Address: 0 
+>>> pte_set_fpn: PID=8, pgn=0 -> RAM(fpn=1), dirty=1
+New PTE value: 0xb0000001 (dirty=1)
+===== Added to FIFO: pgn=0 (PID=8) =====
+print_list_pgn: 
+  va[0] (PID=5)
+  va[0] (PID=6)
+  va[0] (PID=7)
+  va[1] (PID=5)
+  va[2] (PID=5)
+  va[1] (PID=6)
+  va[2] (PID=6)
+  va[1] (PID=7)
+  va[2] (PID=7)
+  va[0] (PID=8)
+Total: 10 pages
+
+BEST FIT search for size=4096 in vma 0:
+  Checking region [0-4096] (size=4096)
+    -> New best fit (size=4096)
+BEST FIT selected: [0-4096] (size=4096)
+  Region fully used, removing from free list
+BEST FIT allocated: [0-4096] (size=4096)
+liballoc:234
+Page Table Dump for PID 8:
+print_pgtbl:
+ PDG=00007d975c00add0 P4G=00007d975c00bde0 PUD=00007d975c00cdf0 PMD=00007d975c00de00
+  00000: [b0000001] (FPN: 1) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 1
+WRITE: pid: 1
 WRITE: pid: 1, addr: 4112, pgn: 1, off: 16
+  TLB MISS for VPN 1
 === pg_getpage DEBUG ===
-PID: 1, Request page: pgn=1, old_pte=0x00000000
-Page Present? NO
-Page Swapped? NO
+PID: 1, Request page: pgn=1, old_pte=0xc0000001
+Page Present? YES
+Page Swapped? YES
 Page Dirty? NO
->>> PAGE FAULT TRIGGERED! <<<
-Page not in SWAP (first access)
-RAM FULL! Need to find VICTIM for SWAP OUT
-ERROR: No pages in clock list
-ERROR: Cannot find victim page
-libwrite:725
+Page is present but currently SWAPPED OUT. Triggering Swap-In...
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=0 (PID=5): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=0 (PID=5)
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=2) -> SWAP[0](fpn=6)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:2 -> SWAP:6)
+>>> pte_set_swap: PID=5, pgn=0 -> SWAP(fpn=6)
+New PTE value: 0xc00000c0 (dirty=0)
+=== SWAP OPERATION ===
+SWAP IN: SWAP[1](fpn=0) -> RAM(fpn=2)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap IN from SWAP[1] (SWAP:0 -> RAM:2)
+>>> pte_set_fpn: PID=1, pgn=1 -> RAM(fpn=2), dirty=0
+New PTE value: 0xa0000002 (dirty=0)
+===== Added to FIFO: pgn=1 (PID=1) =====
+print_list_pgn: 
+  va[0] (PID=6)
+  va[0] (PID=7)
+  va[1] (PID=5)
+  va[2] (PID=5)
+  va[1] (PID=6)
+  va[2] (PID=6)
+  va[1] (PID=7)
+  va[2] (PID=7)
+  va[0] (PID=8)
+  va[1] (PID=1)
+Total: 10 pages
+
+Returning fpn=2 for pgn=1
+=== End pg_getpage ===
+
+  Inserted into TLB: VPN 1 -> FPN 2 (dirty=1)
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 8208 
+Value from SYSCALL WRITE: 25 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Found 1 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
 Page Table Dump for PID 1:
 print_pgtbl:
- PDG=0000780fa8000bd0 P4G=0000780fa8001be0 PUD=0000780fa8002bf0 PMD=0000780fa8003c00
-  00000: [90000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
-Count: 1
+ PDG=00007d9758000bd0 P4G=00007d9758001be0 PUD=00007d9758002bf0 PMD=00007d9758003c00
+  00000: [c0000000] (FPN: 0) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000002] (FPN: 2) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000020] (FPN: 32) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
 ===== PHYSICAL MEMORY DUMP =====
-masz : 4096 
-===== PHYSICAL MEMORY END-DUMP =====
-Time slot   3
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Found 1 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+Time slot   7
+	CPU 2: Put process  7 to run queue
+	CPU 2: Dispatched process  2
 WRITE: pid: 2
 WRITE: pid: 2, addr: 4112, pgn: 1, off: 16
+  TLB MISS for VPN 1
 === pg_getpage DEBUG ===
-PID: 2, Request page: pgn=1, old_pte=0xffffffff
+PID: 2, Request page: pgn=1, old_pte=0xc0000060
 Page Present? YES
 Page Swapped? YES
-Page Dirty? YES
+Page Dirty? NO
 Page is present but currently SWAPPED OUT. Triggering Swap-In...
-ERROR: No pages in clock list
-ERROR: Cannot find victim page
-libwrite:725
-Page Table Dump for PID 2:
-Page table not initialized.
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=0 (PID=6): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=0 (PID=6)
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=3) -> SWAP[1](fpn=0)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[1] (RAM:3 -> SWAP:0)
+>>> pte_set_swap: PID=6, pgn=0 -> SWAP(fpn=0)
+New PTE value: 0xc0000001 (dirty=0)
+=== SWAP OPERATION ===
+SWAP IN: SWAP[0](fpn=3) -> RAM(fpn=3)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap IN from SWAP[0] (SWAP:3 -> RAM:3)
+>>> pte_set_fpn: PID=2, pgn=1 -> RAM(fpn=3), dirty=0
+New PTE value: 0xa0000003 (dirty=0)
+===== Added to FIFO: pgn=1 (PID=2) =====
+print_list_pgn: 
+  va[0] (PID=7)
+  va[1] (PID=5)
+  va[2] (PID=5)
+  va[1] (PID=6)
+  va[2] (PID=6)
+  va[1] (PID=7)
+  va[2] (PID=7)
+  va[0] (PID=8)
+  va[1] (PID=1)
+  va[1] (PID=2)
+Total: 10 pages
+
+Returning fpn=3 for pgn=1
+=== End pg_getpage ===
+
+  Inserted into TLB: VPN 1 -> FPN 3 (dirty=1)
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 12304 
+Value from SYSCALL WRITE: 25 
 ===== PHYSICAL MEMORY DUMP =====
-masz : 4096 
-===== PHYSICAL MEMORY END-DUMP =====
-	CPU 0: Put process  1 to run queue
-	CPU 0: Dispatched process  3
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Found 2 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 2:
+print_pgtbl:
+ PDG=00007d975c000bd0 P4G=00007d975c001be0 PUD=00007d975c002bf0 PMD=00007d975c003c00
+  00000: [c0000021] (FPN: 33) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000003] (FPN: 3) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000061] (FPN: 97) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Found 2 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
 No free regions available in vma 0
-ALLOC PAGE RANGE, PID: 3
+ALLOC PAGE RANGE, PID: 8
 RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
-ERROR: No pages in clock list
-ERROR: Cannot find victim page in alloc_pages_range
-Page num 0 -> Address: 0 
-BEST FIT search for size=4096 in vma 0:
-  Checking region [0-4096] (size=4096)
-    -> New best fit (size=4096)
-BEST FIT selected: [0-4096] (size=4096)
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=0 (PID=7): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=0 (PID=7)
+Selected VICTIM: PID=7, pgn=0, fpn=4, pte=0x90000004, dirty=1
+Free SWAP frame obtained at SWAP 0: swpfpn=3
+SWAP OUT: RAM(4) -> SWAP 0(3) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=4) -> SWAP[0](fpn=3)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:4 -> SWAP:3)
+>>> pte_set_swap: PID=7, pgn=0 -> SWAP(fpn=3)
+New PTE value: 0xc0000060 (dirty=0)
+Updated VICTIM PTE (PID=7, pgn=0) to point to SWAP 0(3)
+Victim frame 4 now available for new page allocation
+RAM is full! Need to find VICTIM for SWAP OUT in alloc_pages_range
+
+=== CLOCK Algorithm Searching (List length: 9) ===
+Checking pgn=1 (PID=5): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=1 (PID=5)
+Selected VICTIM: PID=5, pgn=1, fpn=5, pte=0x90000005, dirty=1
+Free SWAP frame obtained at SWAP 1: swpfpn=6
+SWAP OUT: RAM(5) -> SWAP 1(6) because dirty=1
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=5) -> SWAP[1](fpn=6)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[1] (RAM:5 -> SWAP:6)
+>>> pte_set_swap: PID=5, pgn=1 -> SWAP(fpn=6)
+New PTE value: 0xc00000c1 (dirty=0)
+Updated VICTIM PTE (PID=5, pgn=1) to point to SWAP 1(6)
+Victim frame 5 now available for new page allocation
+Page num 1 -> Address: 4096 
+>>> pte_set_fpn: PID=8, pgn=1 -> RAM(fpn=4), dirty=1
+New PTE value: 0xb0000004 (dirty=1)
+===== Added to FIFO: pgn=1 (PID=8) =====
+print_list_pgn: 
+  va[2] (PID=5)
+  va[1] (PID=6)
+  va[2] (PID=6)
+  va[1] (PID=7)
+  va[2] (PID=7)
+  va[0] (PID=8)
+  va[1] (PID=1)
+  va[1] (PID=2)
+  va[1] (PID=8)
+Total: 9 pages
+
+>>> pte_set_fpn: PID=8, pgn=2 -> RAM(fpn=5), dirty=1
+New PTE value: 0xb0000005 (dirty=1)
+===== Added to FIFO: pgn=2 (PID=8) =====
+print_list_pgn: 
+  va[2] (PID=5)
+  va[1] (PID=6)
+  va[2] (PID=6)
+  va[1] (PID=7)
+  va[2] (PID=7)
+  va[0] (PID=8)
+  va[1] (PID=1)
+  va[1] (PID=2)
+  va[1] (PID=8)
+  va[2] (PID=8)
+Total: 10 pages
+
+BEST FIT search for size=8192 in vma 0:
+  Checking region [4096-12288] (size=8192)
+    -> New best fit (size=8192)
+BEST FIT selected: [4096-12288] (size=8192)
   Region fully used, removing from free list
-BEST FIT allocated: [0-4096] (size=4096)
+BEST FIT allocated: [4096-12288] (size=8192)
 liballoc:234
-Page Table Dump for PID 3:
-Page table not initialized.
-Time slot   4
-	CPU 1: Put process  2 to run queue
-	CPU 1: Dispatched process  1
+Page Table Dump for PID 8:
+print_pgtbl:
+ PDG=00007d975c00add0 P4G=00007d975c00bde0 PUD=00007d975c00cdf0 PMD=00007d975c00de00
+  00000: [b0000001] (FPN: 1) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00001: [b0000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [b0000005] (FPN: 5) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+Count: 3
+PID: 1. Calc...
+Time slot   8
+PID: 2. Calc...
+	CPU 1: Put process  8 to run queue
+	CPU 1: Dispatched process  3
 WRITE: pid: 3
 WRITE: pid: 3, addr: 4112, pgn: 1, off: 16
+  TLB MISS for VPN 1
+	CPU 0: Put process  1 to run queue
 === pg_getpage DEBUG ===
-PID: 3, Request page: pgn=1, old_pte=0xffffffff
+PID: 3, Request page: pgn=1, old_pte=0xc0000080
+	CPU 0: Dispatched process  4
 Page Present? YES
 Page Swapped? YES
-Page Dirty? YES
-Page is present but currently SWAPPED OUT. Triggering Swap-In...
-ERROR: No pages in clock list
-ERROR: Cannot find victim page
-libwrite:725
-Page Table Dump for PID 3:
-Page table not initialized.
-===== PHYSICAL MEMORY DUMP =====
-masz : 4096 
-===== PHYSICAL MEMORY END-DUMP =====
-Time slot   5
-	CPU 0: Put process  3 to run queue
-	CPU 0: Dispatched process  2
-READ: pid: 1
-READ: pid: 1, addr: 4112, pgn: 1, off: 16
-=== pg_getpage DEBUG ===
-PID: 1, Request page: pgn=1, old_pte=0x00000000
-Page Present? NO
-Page Swapped? NO
 Page Dirty? NO
->>> PAGE FAULT TRIGGERED! <<<
-Page not in SWAP (first access)
-RAM FULL! Need to find VICTIM for SWAP OUT
-ERROR: No pages in clock list
-ERROR: Cannot find victim page
-libread:674
+Page is present but currently SWAPPED OUT. Triggering Swap-In...
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=2 (PID=5): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=2 (PID=5)
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=6) -> SWAP[0](fpn=7)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:6 -> SWAP:7)
+>>> pte_set_swap: PID=5, pgn=2 -> SWAP(fpn=7)
+New PTE value: 0xc00000e0 (dirty=0)
+=== SWAP OPERATION ===
+SWAP IN: SWAP[0](fpn=4) -> RAM(fpn=6)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap IN from SWAP[0] (SWAP:4 -> RAM:6)
+>>> pte_set_fpn: PID=3, pgn=1 -> RAM(fpn=6), dirty=0
+New PTE value: 0xa0000006 (dirty=0)
+===== Added to FIFO: pgn=1 (PID=3) =====
+print_list_pgn: 
+  va[1] (PID=6)
+  va[2] (PID=6)
+  va[1] (PID=7)
+  va[2] (PID=7)
+  va[0] (PID=8)
+  va[1] (PID=1)
+  va[1] (PID=2)
+  va[1] (PID=8)
+  va[2] (PID=8)
+  va[1] (PID=3)
+Total: 10 pages
+
+Returning fpn=6 for pgn=1
+=== End pg_getpage ===
+
+  Inserted into TLB: VPN 1 -> FPN 6 (dirty=1)
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 24592 
+Value from SYSCALL WRITE: 25 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Found 3 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 3:
+print_pgtbl:
+ PDG=00007d97600110c0 P4G=00007d97600120d0 PUD=00007d97600130e0 PMD=00007d97600140f0
+  00000: [c0000040] (FPN: 64) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000006] (FPN: 6) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000081] (FPN: 129) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Found 3 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+WRITE: pid: 4
+WRITE: pid: 4, addr: 4112, pgn: 1, off: 16
+  TLB MISS for VPN 1
+=== pg_getpage DEBUG ===
+PID: 4, Request page: pgn=1, old_pte=0xc00000a0
+Page Present? YES
+Page Swapped? YES
+Page Dirty? NO
+Page is present but currently SWAPPED OUT. Triggering Swap-In...
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=1 (PID=6): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=1 (PID=6)
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=7) -> SWAP[1](fpn=7)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[1] (RAM:7 -> SWAP:7)
+>>> pte_set_swap: PID=6, pgn=1 -> SWAP(fpn=7)
+New PTE value: 0xc00000e1 (dirty=0)
+=== SWAP OPERATION ===
+SWAP IN: SWAP[0](fpn=5) -> RAM(fpn=7)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap IN from SWAP[0] (SWAP:5 -> RAM:7)
+>>> pte_set_fpn: PID=4, pgn=1 -> RAM(fpn=7), dirty=0
+New PTE value: 0xa0000007 (dirty=0)
+===== Added to FIFO: pgn=1 (PID=4) =====
+print_list_pgn: 
+  va[2] (PID=6)
+  va[1] (PID=7)
+  va[2] (PID=7)
+  va[0] (PID=8)
+  va[1] (PID=1)
+  va[1] (PID=2)
+  va[1] (PID=8)
+  va[2] (PID=8)
+  va[1] (PID=3)
+  va[1] (PID=4)
+Total: 10 pages
+
+Returning fpn=7 for pgn=1
+=== End pg_getpage ===
+
+  Inserted into TLB: VPN 1 -> FPN 7 (dirty=1)
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 28688 
+Value from SYSCALL WRITE: 25 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Found 4 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 4:
+print_pgtbl:
+ PDG=00007d9758005d00 P4G=00007d9758006d10 PUD=00007d9758007d20 PMD=00007d9758008d30
+  00000: [c0000041] (FPN: 65) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000007] (FPN: 7) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a1] (FPN: 161) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Found 4 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+Time slot   9
+PID: 3. Calc...
+	CPU 2: Put process  2 to run queue
+	CPU 2: Dispatched process  5
+WRITE: pid: 5
+WRITE: pid: 5, addr: 4112, pgn: 1, off: 16
+  TLB MISS for VPN 1
+=== pg_getpage DEBUG ===
+PID: 5, Request page: pgn=1, old_pte=0xc00000c1
+Page Present? YES
+Page Swapped? YES
+Page Dirty? NO
+Page is present but currently SWAPPED OUT. Triggering Swap-In...
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=2 (PID=6): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=2 (PID=6)
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=8) -> SWAP[0](fpn=5)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:8 -> SWAP:5)
+>>> pte_set_swap: PID=6, pgn=2 -> SWAP(fpn=5)
+New PTE value: 0xc00000a0 (dirty=0)
+=== SWAP OPERATION ===
+SWAP IN: SWAP[1](fpn=6) -> RAM(fpn=8)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap IN from SWAP[1] (SWAP:6 -> RAM:8)
+>>> pte_set_fpn: PID=5, pgn=1 -> RAM(fpn=8), dirty=0
+New PTE value: 0xa0000008 (dirty=0)
+===== Added to FIFO: pgn=1 (PID=5) =====
+print_list_pgn: 
+  va[1] (PID=7)
+  va[2] (PID=7)
+  va[0] (PID=8)
+  va[1] (PID=1)
+  va[1] (PID=2)
+  va[1] (PID=8)
+  va[2] (PID=8)
+  va[1] (PID=3)
+  va[1] (PID=4)
+  va[1] (PID=5)
+Total: 10 pages
+
+Returning fpn=8 for pgn=1
+=== End pg_getpage ===
+
+  Inserted into TLB: VPN 1 -> FPN 8 (dirty=1)
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 32784 
+Value from SYSCALL WRITE: 25 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Found 5 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 5:
+print_pgtbl:
+ PDG=00007d975c005d00 P4G=00007d975c006d10 PUD=00007d975c007d20 PMD=00007d975c008d30
+  00000: [c00000c0] (FPN: 192) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000008] (FPN: 8) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000e0] (FPN: 224) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Found 5 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+PID: 4. Calc...
+Time slot  10
+PID: 5. Calc...
+	CPU 1: Put process  3 to run queue
+	CPU 1: Dispatched process  6
+WRITE: pid: 6
+WRITE: pid: 6, addr: 4112, pgn: 1, off: 16
+  TLB MISS for VPN 1
+=== pg_getpage DEBUG ===
+PID: 6, Request page: pgn=1, old_pte=0xc00000e1
+Page Present? YES
+Page Swapped? YES
+Page Dirty? NO
+Page is present but currently SWAPPED OUT. Triggering Swap-In...
+
+=== CLOCK Algorithm Searching (List length: 	CPU 0: Put process  4 to run queue
+10) ===
+	CPU 0: Dispatched process  7
+Checking pgn=1 (PID=7): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=2 (PID=7): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=0 (PID=8): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=1): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=2): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=8): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=2 (PID=8): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=3): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=4): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+Checking pgn=1 (PID=5): present=1, referenced=1
+  -> Giving second chance, clearing reference bit
+All pages had ref=1, taking first page as victim
+Selected victim: pgn=1 (PID=7)
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=9) -> SWAP[1](fpn=6)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[1] (RAM:9 -> SWAP:6)
+>>> pte_set_swap: PID=7, pgn=1 -> SWAP(fpn=6)
+New PTE value: 0xc00000c1 (dirty=0)
+=== SWAP OPERATION ===
+SWAP IN: SWAP[1](fpn=7) -> RAM(fpn=9)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap IN from SWAP[1] (SWAP:7 -> RAM:9)
+>>> pte_set_fpn: PID=6, pgn=1 -> RAM(fpn=9), dirty=0
+New PTE value: 0xa0000009 (dirty=0)
+===== Added to FIFO: pgn=1 (PID=6) =====
+print_list_pgn: 
+  va[2] (PID=7)
+  va[0] (PID=8)
+  va[1] (PID=1)
+  va[1] (PID=2)
+  va[1] (PID=8)
+  va[2] (PID=8)
+  va[1] (PID=3)
+  va[1] (PID=4)
+  va[1] (PID=5)
+  va[1] (PID=6)
+Total: 10 pages
+
+Returning fpn=9 for pgn=1
+=== End pg_getpage ===
+
+  Inserted into TLB: VPN 1 -> FPN 9 (dirty=1)
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 36880 
+Value from SYSCALL WRITE: 25 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 6 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 6:
+print_pgtbl:
+ PDG=00007d97600161f0 P4G=00007d9760017200 PUD=00007d9760018210 PMD=00007d9760019220
+  00000: [c0000001] (FPN: 1) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000009] (FPN: 9) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a0] (FPN: 160) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 6 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+WRITE: pid: 7
+WRITE: pid: 7, addr: 4112, pgn: 1, off: 16
+  TLB MISS for VPN 1
+=== pg_getpage DEBUG ===
+PID: 7, Request page: pgn=1, old_pte=0xc00000c1
+Page Present? YES
+Page Swapped? YES
+Page Dirty? NO
+Page is present but currently SWAPPED OUT. Triggering Swap-In...
+
+=== CLOCK Algorithm Searching (List length: 10) ===
+Checking pgn=2 (PID=7): present=1, referenced=0
+  -> Selected as victim (ref=0)
+Selected victim: pgn=2 (PID=7)
+=== SWAP OPERATION ===
+SWAP OUT: RAM(fpn=0) -> SWAP[0](fpn=4)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap OUT to SWAP[0] (RAM:0 -> SWAP:4)
+>>> pte_set_swap: PID=7, pgn=2 -> SWAP(fpn=4)
+New PTE value: 0xc0000080 (dirty=0)
+=== SWAP OPERATION ===
+SWAP IN: SWAP[1](fpn=6) -> RAM(fpn=0)
+Swap completed successfully
+=== End SWAP ===
+
+SYSCALL: Swap IN from SWAP[1] (SWAP:6 -> RAM:0)
+>>> pte_set_fpn: PID=7, pgn=1 -> RAM(fpn=0), dirty=0
+New PTE value: 0xa0000000 (dirty=0)
+===== Added to FIFO: pgn=1 (PID=7) =====
+print_list_pgn: 
+  va[0] (PID=8)
+  va[1] (PID=1)
+  va[1] (PID=2)
+  va[1] (PID=8)
+  va[2] (PID=8)
+  va[1] (PID=3)
+  va[1] (PID=4)
+  va[1] (PID=5)
+  va[1] (PID=6)
+  va[1] (PID=7)
+Total: 10 pages
+
+Returning fpn=0 for pgn=1
+=== End pg_getpage ===
+
+  Inserted into TLB: VPN 1 -> FPN 0 (dirty=1)
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 16 
+Value from SYSCALL WRITE: 25 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 7 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 7:
+print_pgtbl:
+ PDG=00007d975800adf0 P4G=00007d975800be00 PUD=00007d975800ce10 PMD=00007d975800de20
+  00000: [c0000060] (FPN: 96) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000080] (FPN: 128) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 7 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+Time slot  11
+	CPU 2: Put process  5 to run queue
+	CPU 2: Dispatched process  8
+WRITE: pid: 8
+WRITE: pid: 8, addr: 4112, pgn: 1, off: 16
+  TLB MISS for VPN 1
+=== pg_getpage DEBUG ===
+PID: 8, Request page: pgn=1, old_pte=0x90000004
+Page Present? YES
+Page Swapped? NO
+Page Dirty? YES
+Page already in RAM
+Returning fpn=4 for pgn=1
+=== End pg_getpage ===
+
+  Inserted into TLB: VPN 1 -> FPN 4 (dirty=1)
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 16400 
+Value from SYSCALL WRITE: 25 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 8 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 8:
+print_pgtbl:
+ PDG=00007d975c00add0 P4G=00007d975c00bde0 PUD=00007d975c00cdf0 PMD=00007d975c00de00
+  00000: [90000001] (FPN: 1) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+  00001: [b0000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [90000005] (FPN: 5) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 8 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+PID: 6. Calc...
+PID: 7. Calc...
+Time slot  12
+PID: 8. Calc...
+	CPU 1: Put process  6 to run queue
+	CPU 1: Dispatched process  1
+	CPU 0: Put process  7 to run queue
+	CPU 0: Dispatched process  2
+WRITE: pid: 1
+WRITE: pid: 1, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 138087493533698
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 8192 
+Value from SYSCALL WRITE: 35 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 9 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
 Page Table Dump for PID 1:
 print_pgtbl:
- PDG=0000780fa8000bd0 P4G=0000780fa8001be0 PUD=0000780fa8002bf0 PMD=0000780fa8003c00
-  00000: [90000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
-Count: 1
-Time slot   6
-	CPU 1: Put process  1 to run queue
-	CPU 1: Dispatched process  3
-READ: pid: 2
-READ: pid: 2, addr: 4112, pgn: 1, off: 16
-=== pg_getpage DEBUG ===
-PID: 2, Request page: pgn=1, old_pte=0xffffffff
-Page Present? YES
-Page Swapped? YES
-Page Dirty? YES
-Page is present but currently SWAPPED OUT. Triggering Swap-In...
-ERROR: No pages in clock list
-ERROR: Cannot find victim page
-libread:674
+ PDG=00007d9758000bd0 P4G=00007d9758001be0 PUD=00007d9758002bf0 PMD=00007d9758003c00
+  00000: [c0000000] (FPN: 0) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000002] (FPN: 2) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000020] (FPN: 32) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 9 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+WRITE: pid: 2
+WRITE: pid: 2, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 138087493533699
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 12288 
+Value from SYSCALL WRITE: 35 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 10 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
 Page Table Dump for PID 2:
-Page table not initialized.
-Time slot   7
+print_pgtbl:
+ PDG=00007d975c000bd0 P4G=00007d975c001be0 PUD=00007d975c002bf0 PMD=00007d975c003c00
+  00000: [c0000021] (FPN: 33) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000003] (FPN: 3) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000061] (FPN: 97) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 10 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+Time slot  13
+	CPU 2: Put process  8 to run queue
+PID: 1. Calc...
+	CPU 2: Dispatched process  3
+WRITE: pid: 3
+WRITE: pid: 3, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 138087493533702
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 24576 
+Value from SYSCALL WRITE: 35 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 11 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 3:
+print_pgtbl:
+ PDG=00007d97600110c0 P4G=00007d97600120d0 PUD=00007d97600130e0 PMD=00007d97600140f0
+  00000: [c0000040] (FPN: 64) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000006] (FPN: 6) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000081] (FPN: 129) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 11 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+PID: 2. Calc...
+Time slot  14
+PID: 3. Calc...
+	CPU 1: Put process  1 to run queue
+	CPU 0: Put process  2 to run queue
+	CPU 0: Dispatched process  5
+WRITE: pid: 5
+WRITE: pid: 5, addr: 4096, pgn: 1, off: 0
+	CPU 1: Dispatched process  4
+  TLB HIT: VPN 1 -> FPN 138087493533704
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 32768 
+Value from SYSCALL WRITE: 35 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008000 (byte 32768): 0x23 (35 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 12 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 5:
+print_pgtbl:
+ PDG=00007d975c005d00 P4G=00007d975c006d10 PUD=00007d975c007d20 PMD=00007d975c008d30
+  00000: [c00000c0] (FPN: 192) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000008] (FPN: 8) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000e0] (FPN: 224) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008000 (byte 32768): 0x23 (35 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 12 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+WRITE: pid: 4
+WRITE: pid: 4, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 138087493533703
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 28672 
+Value from SYSCALL WRITE: 35 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007000 (byte 28672): 0x23 (35 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008000 (byte 32768): 0x23 (35 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 13 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 4:
+print_pgtbl:
+ PDG=00007d9758005d00 P4G=00007d9758006d10 PUD=00007d9758007d20 PMD=00007d9758008d30
+  00000: [c0000041] (FPN: 65) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000007] (FPN: 7) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a1] (FPN: 161) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007000 (byte 28672): 0x23 (35 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008000 (byte 32768): 0x23 (35 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 13 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+Time slot  15
+	CPU 2: Put process  3 to run queue
+	CPU 2: Dispatched process  6
+WRITE: pid: 6
+WRITE: pid: 6, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 138087493533705
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 36864 
+Value from SYSCALL WRITE: 35 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007000 (byte 28672): 0x23 (35 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008000 (byte 32768): 0x23 (35 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009000 (byte 36864): 0x23 (35 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 14 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 6:
+print_pgtbl:
+ PDG=00007d97600161f0 P4G=00007d9760017200 PUD=00007d9760018210 PMD=00007d9760019220
+  00000: [c0000001] (FPN: 1) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000009] (FPN: 9) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a0] (FPN: 160) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007000 (byte 28672): 0x23 (35 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008000 (byte 32768): 0x23 (35 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009000 (byte 36864): 0x23 (35 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 14 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+PID: 4. Calc...
+PID: 5. Calc...
+Time slot  16
+PID: 6. Calc...
+	CPU 1: Put process  4 to run queue
+	CPU 1: Dispatched process  7
+WRITE: pid: 7
+WRITE: pid: 7, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 138087493533696
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 0 
+Value from SYSCALL WRITE: 35 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+	CPU 0: Put process  5 to run queue
+Address 0x00000000 (byte 0): 0x23 (35 decimal)
+	CPU 0: Dispatched process  8
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007000 (byte 28672): 0x23 (35 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008000 (byte 32768): 0x23 (35 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009000 (byte 36864): 0x23 (35 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 15 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 7:
+print_pgtbl:
+ PDG=00007d975800adf0 P4G=00007d975800be00 PUD=00007d975800ce10 PMD=00007d975800de20
+  00000: [c0000060] (FPN: 96) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000080] (FPN: 128) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000000 (byte 0): 0x23 (35 decimal)
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007000 (byte 28672): 0x23 (35 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008000 (byte 32768): 0x23 (35 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009000 (byte 36864): 0x23 (35 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 15 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+WRITE: pid: 8
+WRITE: pid: 8, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 138087493533700
+----------------------------------------------------
+PhyAddres from SYSCALL WRITE: 16384 
+Value from SYSCALL WRITE: 35 
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000000 (byte 0): 0x23 (35 decimal)
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004000 (byte 16384): 0x23 (35 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007000 (byte 28672): 0x23 (35 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008000 (byte 32768): 0x23 (35 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009000 (byte 36864): 0x23 (35 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 16 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+libwrite:747
+Page Table Dump for PID 8:
+print_pgtbl:
+ PDG=00007d975c00add0 P4G=00007d975c00bde0 PUD=00007d975c00cdf0 PMD=00007d975c00de00
+  00000: [90000001] (FPN: 1) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+  00001: [b0000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [90000005] (FPN: 5) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+Count: 3
+===== PHYSICAL MEMORY DUMP =====
+Memory size: 40960 bytes
+Random access: YES
+Address 0x00000000 (byte 0): 0x23 (35 decimal)
+Address 0x00000010 (byte 16): 0x19 (25 decimal)
+Address 0x00002000 (byte 8192): 0x23 (35 decimal)
+Address 0x00002010 (byte 8208): 0x19 (25 decimal)
+Address 0x00003000 (byte 12288): 0x23 (35 decimal)
+Address 0x00003010 (byte 12304): 0x19 (25 decimal)
+Address 0x00004000 (byte 16384): 0x23 (35 decimal)
+Address 0x00004010 (byte 16400): 0x19 (25 decimal)
+Address 0x00006000 (byte 24576): 0x23 (35 decimal)
+Address 0x00006010 (byte 24592): 0x19 (25 decimal)
+Address 0x00007000 (byte 28672): 0x23 (35 decimal)
+Address 0x00007010 (byte 28688): 0x19 (25 decimal)
+Address 0x00008000 (byte 32768): 0x23 (35 decimal)
+Address 0x00008010 (byte 32784): 0x19 (25 decimal)
+Address 0x00009000 (byte 36864): 0x23 (35 decimal)
+Address 0x00009010 (byte 36880): 0x19 (25 decimal)
+Found 16 non-zero bytes
+===== END PHYSICAL MEMORY DUMP =====
+Time slot  17
+	CPU 2: Put process  6 to run queue
+	CPU 2: Dispatched process  1
+READ: pid: 1
+READ: pid: 1, addr: 4112, pgn: 1, off: 16
+  TLB HIT: VPN 1 -> FPN 138087493533698
+DEBUG CHECK READ: PID=1 read from Addr=8208 -> Got Value=25
+libread:696
+Page Table Dump for PID 1:
+print_pgtbl:
+ PDG=00007d9758000bd0 P4G=00007d9758001be0 PUD=00007d9758002bf0 PMD=00007d9758003c00
+  00000: [c0000000] (FPN: 0) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000002] (FPN: 2) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000020] (FPN: 32) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+PID: 8. Calc...
+PID: 7. Calc...
+Time slot  18
+READ: pid: 1
+READ: pid: 1, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 21474836482
+	CPU 1: Put process  7 to run queue
+DEBUG CHECK READ: PID=1 read from Addr=8192 -> Got Value=35
+libread:696
+Page Table Dump for PID 1:
+print_pgtbl:
+ PDG=00007d9758000bd0 P4G=00007d9758001be0 PUD=00007d9758002bf0 PMD=00007d9758003c00
+	CPU 1: Dispatched process  2
+  00000: [c0000000] (FPN: 0) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000002] (FPN: 2) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000020] (FPN: 32) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+	CPU 0: Put process  8 to run queue
+	CPU 0: Dispatched process  3
 READ: pid: 3
 READ: pid: 3, addr: 4112, pgn: 1, off: 16
-=== pg_getpage DEBUG ===
-PID: 3, Request page: pgn=1, old_pte=0xffffffff
-Page Present? YES
-Page Swapped? YES
-Page Dirty? YES
-Page is present but currently SWAPPED OUT. Triggering Swap-In...
-ERROR: No pages in clock list
-ERROR: Cannot find victim page
-libread:674
+  TLB HIT: VPN 1 -> FPN 138087493533702
+DEBUG CHECK READ: PID=3 read from Addr=24592 -> Got Value=25
+libread:696
 Page Table Dump for PID 3:
-Page table not initialized.
-	CPU 0: Put process  2 to run queue
-	CPU 0: Dispatched process  1
+print_pgtbl:
+ PDG=00007d97600110c0 P4G=00007d97600120d0 PUD=00007d97600130e0 PMD=00007d97600140f0
+  00000: [c0000040] (FPN: 64) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000006] (FPN: 6) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000081] (FPN: 129) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+READ: pid: 2
+READ: pid: 2, addr: 4112, pgn: 1, off: 16
+  TLB HIT: VPN 1 -> FPN 138087493533699
+DEBUG CHECK READ: PID=2 read from Addr=12304 -> Got Value=25
+libread:696
+Page Table Dump for PID 2:
+print_pgtbl:
+ PDG=00007d975c000bd0 P4G=00007d975c001be0 PUD=00007d975c002bf0 PMD=00007d975c003c00
+  00000: [c0000021] (FPN: 33) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000003] (FPN: 3) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000061] (FPN: 97) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+Time slot  19
+	CPU 2: Put process  1 to run queue
+	CPU 2: Dispatched process  4
+READ: pid: 4
+READ: pid: 4, addr: 4112, pgn: 1, off: 16
+  TLB HIT: VPN 1 -> FPN 21474836487
+DEBUG CHECK READ: PID=4 read from Addr=28688 -> Got Value=25
+libread:696
+Page Table Dump for PID 4:
+print_pgtbl:
+ PDG=00007d9758005d00 P4G=00007d9758006d10 PUD=00007d9758007d20 PMD=00007d9758008d30
+  00000: [c0000041] (FPN: 65) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000007] (FPN: 7) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a1] (FPN: 161) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+READ: pid: 3
+READ: pid: 3, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 21474836486
+DEBUG CHECK READ: PID=3 read from Addr=24576 -> Got Value=35
+libread:696
+Page Table Dump for PID 3:
+print_pgtbl:
+ PDG=00007d97600110c0 P4G=00007d97600120d0 PUD=00007d97600130e0 PMD=00007d97600140f0
+  00000: [c0000040] (FPN: 64) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000006] (FPN: 6) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000081] (FPN: 129) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+READ: pid: 2
+READ: pid: 2, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 21474836483
+DEBUG CHECK READ: PID=2 read from Addr=12288 -> Got Value=35
+libread:696
+Page Table Dump for PID 2:
+print_pgtbl:
+ PDG=00007d975c000bd0 P4G=00007d975c001be0 PUD=00007d975c002bf0 PMD=00007d975c003c00
+  00000: [c0000021] (FPN: 33) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000003] (FPN: 3) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000061] (FPN: 97) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+Time slot  20
+READ: pid: 4
+READ: pid: 4, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 21474836487
+DEBUG CHECK READ: PID=4 read from Addr=28672 -> Got Value=35
+libread:696
+Page Table Dump for PID 4:
+print_pgtbl:
+ PDG=00007d9758005d00 P4G=00007d9758006d10 PUD=00007d9758007d20 PMD=00007d9758008d30
+  00000: [c0000041] (FPN: 65) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000007] (FPN: 7) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a1] (FPN: 161) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+	CPU 1: Put process  2 to run queue
+	CPU 1: Dispatched process  5
+READ: pid: 5
+READ: pid: 5, addr: 4112, pgn: 1, off: 16
+  TLB HIT: VPN 1 -> FPN 21474836488
+DEBUG CHECK READ: PID=5 read from Addr=32784 -> Got Value=25
+libread:696
+Page Table Dump for PID 5:
+print_pgtbl:
+ PDG=00007d975c005d00 P4G=00007d975c006d10 PUD=00007d975c007d20 PMD=00007d975c008d30
+  00000: [c00000c0] (FPN: 192) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000008] (FPN: 8) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000e0] (FPN: 224) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+	CPU 0: Put process  3 to run queue
+	CPU 0: Dispatched process  6
+READ: pid: 6
+READ: pid: 6, addr: 4112, pgn: 1, off: 16
+  TLB HIT: VPN 1 -> FPN 21474836489
+DEBUG CHECK READ: PID=6 read from Addr=36880 -> Got Value=25
+libread:696
+Page Table Dump for PID 6:
+print_pgtbl:
+ PDG=00007d97600161f0 P4G=00007d9760017200 PUD=00007d9760018210 PMD=00007d9760019220
+  00000: [c0000001] (FPN: 1) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000009] (FPN: 9) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a0] (FPN: 160) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+Time slot  21
+	CPU 2: Put process  4 to run queue
+	CPU 2: Dispatched process  7
+READ: pid: 7
+READ: pid: 7, addr: 4112, pgn: 1, off: 16
+  TLB HIT: VPN 1 -> FPN 21474836480
+DEBUG CHECK READ: PID=7 read from Addr=16 -> Got Value=25
+libread:696
+Page Table Dump for PID 7:
+print_pgtbl:
+ PDG=00007d975800adf0 P4G=00007d975800be00 PUD=00007d975800ce10 PMD=00007d975800de20
+  00000: [c0000060] (FPN: 96) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000080] (FPN: 128) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+READ: pid: 5
+READ: pid: 5, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 21474836488
+DEBUG CHECK READ: PID=5 read from Addr=32768 -> Got Value=35
+libread:696
+Page Table Dump for PID 5:
+print_pgtbl:
+ PDG=00007d975c005d00 P4G=00007d975c006d10 PUD=00007d975c007d20 PMD=00007d975c008d30
+  00000: [c00000c0] (FPN: 192) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000008] (FPN: 8) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000e0] (FPN: 224) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+READ: pid: 6
+READ: pid: 6, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 21474836489
+DEBUG CHECK READ: PID=6 read from Addr=36864 -> Got Value=35
+libread:696
+Page Table Dump for PID 6:
+print_pgtbl:
+ PDG=00007d97600161f0 P4G=00007d9760017200 PUD=00007d9760018210 PMD=00007d9760019220
+  00000: [c0000001] (FPN: 1) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000009] (FPN: 9) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a0] (FPN: 160) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+Time slot  22
+	CPU 0: Put process  6 to run queue
+	CPU 0: Dispatched process  8
+READ: pid: 8
+READ: pid: 8, addr: 4112, pgn: 1, off: 16
+  TLB HIT: VPN 1 -> FPN 21474836484
+DEBUG CHECK READ: PID=8 read from Addr=16400 -> Got Value=25
+libread:696
+Page Table Dump for PID 8:
+print_pgtbl:
+ PDG=00007d975c00add0 P4G=00007d975c00bde0 PUD=00007d975c00cdf0 PMD=00007d975c00de00
+  00000: [90000001] (FPN: 1) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+  00001: [b0000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [90000005] (FPN: 5) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+Count: 3
+	CPU 1: Put process  5 to run queue
+	CPU 1: Dispatched process  1
+[FREE LAZY] PID=1, vmaid=0, rgid=1
+  Freed region [4096-12288] (size=8192). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 1:
+print_pgtbl:
+ PDG=00007d9758000bd0 P4G=00007d9758001be0 PUD=00007d9758002bf0 PMD=00007d9758003c00
+  00000: [c0000000] (FPN: 0) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000002] (FPN: 2) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000020] (FPN: 32) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+READ: pid: 7
+READ: pid: 7, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 21474836480
+DEBUG CHECK READ: PID=7 read from Addr=0 -> Got Value=35
+libread:696
+Page Table Dump for PID 7:
+print_pgtbl:
+ PDG=00007d975800adf0 P4G=00007d975800be00 PUD=00007d975800ce10 PMD=00007d975800de20
+  00000: [c0000060] (FPN: 96) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000080] (FPN: 128) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+Time slot  23
+	CPU 2: Put process  7 to run queue
+	CPU 2: Dispatched process  2
+[FREE LAZY] PID=2, vmaid=0, rgid=1
+  Freed region [4096-12288] (size=8192). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 2:
+print_pgtbl:
+ PDG=00007d975c000bd0 P4G=00007d975c001be0 PUD=00007d975c002bf0 PMD=00007d975c003c00
+  00000: [c0000021] (FPN: 33) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000003] (FPN: 3) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000061] (FPN: 97) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
 [FREE LAZY] PID=1, vmaid=0, rgid=2
   Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
 libfree:259
 Page Table Dump for PID 1:
 print_pgtbl:
- PDG=0000780fa8000bd0 P4G=0000780fa8001be0 PUD=0000780fa8002bf0 PMD=0000780fa8003c00
-  00000: [90000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
-Count: 1
-Time slot   8
-	CPU 1: Put process  3 to run queue
-	CPU 1: Dispatched process  2
+ PDG=00007d9758000bd0 P4G=00007d9758001be0 PUD=00007d9758002bf0 PMD=00007d9758003c00
+  00000: [c0000000] (FPN: 0) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000002] (FPN: 2) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000020] (FPN: 32) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+READ: pid: 8
+READ: pid: 8, addr: 4096, pgn: 1, off: 0
+  TLB HIT: VPN 1 -> FPN 21474836484
+DEBUG CHECK READ: PID=8 read from Addr=16384 -> Got Value=35
+libread:696
+Page Table Dump for PID 8:
+print_pgtbl:
+ PDG=00007d975c00add0 P4G=00007d975c00bde0 PUD=00007d975c00cdf0 PMD=00007d975c00de00
+  00000: [90000001] (FPN: 1) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+  00001: [b0000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [90000005] (FPN: 5) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+Count: 3
+Time slot  24
 [FREE LAZY] PID=2, vmaid=0, rgid=2
   Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
 libfree:259
 Page Table Dump for PID 2:
-Page table not initialized.
-	CPU 0: Processed  1 has finished
-	CPU 0: Dispatched process  3
+print_pgtbl:
+ PDG=00007d975c000bd0 P4G=00007d975c001be0 PUD=00007d975c002bf0 PMD=00007d975c003c00
+  00000: [c0000021] (FPN: 33) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000003] (FPN: 3) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000061] (FPN: 97) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+	CPU 1: Processed  1 has finished
+	CPU 1: Dispatched process  3
+[FREE LAZY] PID=3, vmaid=0, rgid=1
+  Freed region [4096-12288] (size=8192). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 3:
+print_pgtbl:
+ PDG=00007d97600110c0 P4G=00007d97600120d0 PUD=00007d97600130e0 PMD=00007d97600140f0
+  00000: [c0000040] (FPN: 64) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000006] (FPN: 6) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000081] (FPN: 129) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+	CPU 0: Put process  8 to run queue
+Count: 3
+	CPU 0: Dispatched process  4
+[FREE LAZY] PID=4, vmaid=0, rgid=1
+  Freed region [4096-12288] (size=8192). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 4:
+print_pgtbl:
+ PDG=00007d9758005d00 P4G=00007d9758006d10 PUD=00007d9758007d20 PMD=00007d9758008d30
+  00000: [c0000041] (FPN: 65) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000007] (FPN: 7) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a1] (FPN: 161) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+Time slot  25
+	CPU 2: Processed  2 has finished
+	CPU 2: Dispatched process  6
+[FREE LAZY] PID=6, vmaid=0, rgid=1
+  Freed region [4096-12288] (size=8192). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 6:
+print_pgtbl:
+ PDG=00007d97600161f0 P4G=00007d9760017200 PUD=00007d9760018210 PMD=00007d9760019220
+  00000: [c0000001] (FPN: 1) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000009] (FPN: 9) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a0] (FPN: 160) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
 [FREE LAZY] PID=3, vmaid=0, rgid=2
   Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
 libfree:259
 Page Table Dump for PID 3:
-Page table not initialized.
-Time slot   9
-	CPU 1: Processed  2 has finished
-	CPU 0: Processed  3 has finished
-	CPU 1 stopped
+print_pgtbl:
+ PDG=00007d97600110c0 P4G=00007d97600120d0 PUD=00007d97600130e0 PMD=00007d97600140f0
+  00000: [c0000040] (FPN: 64) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000006] (FPN: 6) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000081] (FPN: 129) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+[FREE LAZY] PID=4, vmaid=0, rgid=2
+  Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 4:
+print_pgtbl:
+ PDG=00007d9758005d00 P4G=00007d9758006d10 PUD=00007d9758007d20 PMD=00007d9758008d30
+  00000: [c0000041] (FPN: 65) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000007] (FPN: 7) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a1] (FPN: 161) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+Time slot  26
+[FREE LAZY] PID=6, vmaid=0, rgid=2
+  Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 6:
+print_pgtbl:
+ PDG=00007d97600161f0 P4G=00007d9760017200 PUD=00007d9760018210 PMD=00007d9760019220
+  00000: [c0000001] (FPN: 1) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000009] (FPN: 9) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000a0] (FPN: 160) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+	CPU 1: Processed  3 has finished
+	CPU 0: Processed  4 has finished
+	CPU 1: Dispatched process  5
+	CPU 0: Dispatched process  7
+[FREE LAZY] PID=7, vmaid=0, rgid=1
+  Freed region [4096-12288] (size=8192). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 7:
+print_pgtbl:
+ PDG=00007d975800adf0 P4G=00007d975800be00 PUD=00007d975800ce10 PMD=00007d975800de20
+  00000: [c0000060] (FPN: 96) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000080] (FPN: 128) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+[FREE LAZY] PID=5, vmaid=0, rgid=1
+  Freed region [4096-12288] (size=8192). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 5:
+print_pgtbl:
+ PDG=00007d975c005d00 P4G=00007d975c006d10 PUD=00007d975c007d20 PMD=00007d975c008d30
+  00000: [c00000c0] (FPN: 192) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000008] (FPN: 8) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000e0] (FPN: 224) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+Time slot  27
+	CPU 2: Processed  6 has finished
+	CPU 2: Dispatched process  8
+[FREE LAZY] PID=8, vmaid=0, rgid=1
+  Freed region [4096-12288] (size=8192). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 8:
+print_pgtbl:
+ PDG=00007d975c00add0 P4G=00007d975c00bde0 PUD=00007d975c00cdf0 PMD=00007d975c00de00
+  00000: [90000001] (FPN: 1) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+  00001: [b0000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [90000005] (FPN: 5) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+Count: 3
+[FREE LAZY] PID=7, vmaid=0, rgid=2
+  Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 7:
+print_pgtbl:
+ PDG=00007d975800adf0 P4G=00007d975800be00 PUD=00007d975800ce10 PMD=00007d975800de20
+  00000: [c0000060] (FPN: 96) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000000] (FPN: 0) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c0000080] (FPN: 128) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+[FREE LAZY] PID=5, vmaid=0, rgid=2
+  Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 5:
+print_pgtbl:
+ PDG=00007d975c005d00 P4G=00007d975c006d10 PUD=00007d975c007d20 PMD=00007d975c008d30
+  00000: [c00000c0] (FPN: 192) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+  00001: [b0000008] (FPN: 8) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [c00000e0] (FPN: 224) (PRE: 1) (SWA: 1) (DIR: 0) (REF: 0)
+Count: 3
+Time slot  28
+	CPU 1: Processed  5 has finished
+[FREE LAZY] PID=8, vmaid=0, rgid=2
+  Freed region [0-4096] (size=4096). Physical frames NOT freed (LAZY).
+libfree:259
+Page Table Dump for PID 8:
+print_pgtbl:
+ PDG=00007d975c00add0 P4G=00007d975c00bde0 PUD=00007d975c00cdf0 PMD=00007d975c00de00
+  00000: [90000001] (FPN: 1) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+  00001: [b0000004] (FPN: 4) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 1)
+  00002: [90000005] (FPN: 5) (PRE: 1) (SWA: 0) (DIR: 1) (REF: 0)
+Count: 3
+	CPU 0: Processed  7 has finished
 	CPU 0 stopped
+	CPU 1 stopped
+Time slot  29
+	CPU 2: Processed  8 has finished
+	CPU 2 stopped
+
+===== TLB FINAL STATISTICS =====
+Total Hits: 24
+Total Misses: 8
+Hit Rate: 75.00%
+==============================
+
+===== TLB DUMP =====
+Size: 64 entries
+Hits: 24, Misses: 8
+Hit Rate: 75.00%
+Entries:
+  [0] VPN: 1 -> FPN: 2 (PID: 1, Age: 14)
+  [2] VPN: 1 -> FPN: 6 (PID: 3, Age: 10)
+  [3] VPN: 1 -> FPN: 3 (PID: 2, Age: 9)
+  [4] VPN: 1 -> FPN: 8 (PID: 5, Age: 4)
+  [5] VPN: 1 -> FPN: 7 (PID: 4, Age: 8)
+  [6] VPN: 1 -> FPN: 0 (PID: 7, Age: 1)
+  [7] VPN: 1 -> FPN: 9 (PID: 6, Age: 3)
+  [9] VPN: 1 -> FPN: 4 (PID: 8, Age: 0)
+Valid entries: 8
+====================

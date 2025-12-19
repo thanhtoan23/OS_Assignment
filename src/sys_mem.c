@@ -80,7 +80,6 @@ int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
    case SYSMEM_SWP_OP:
             /* a2: src_fpn, a3: dst_fpn, a4: direction, a5: swp_type */
             __mm_swap_page(caller, regs->a2, regs->a3, regs->a4, regs->a5);
-            printf("Co goi swap: \n");
             break;
    case SYSMEM_IO_READ:
             MEMPHY_read(krnl->mram, regs->a2, &value);
@@ -92,7 +91,7 @@ int __sys_memmap(struct krnl_t *krnl, uint32_t pid, struct sc_regs* regs)
             MEMPHY_write(krnl->mram, regs->a2, regs->a3);
             printf("----------------------------------------------------\n");
             printf("PhyAddres from SYSCALL WRITE: %lu \n",regs->a2);
-            printf("Value from SYSCALL WRITE: %d \n",regs->a3);
+            printf("Value from SYSCALL WRITE: %ld \n",regs->a3);
             MEMPHY_dump(krnl->mram);
             break;
    default:

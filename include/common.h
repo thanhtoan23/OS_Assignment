@@ -46,7 +46,6 @@ typedef ARG_TYPE arg_t;
 #define FORMAT_ARG "%u"
 #endif
 
-
 enum ins_opcode_t
 {
 	CALC,  // Just perform calculation, only use CPU
@@ -61,7 +60,7 @@ enum ins_opcode_t
 struct inst_t
 {
 	enum ins_opcode_t opcode;
-	arg_t arg_0; // Argument lists for instructions
+	arg_t arg_0;
 	arg_t arg_1;
 	arg_t arg_2;
 	arg_t arg_3;
@@ -77,39 +76,34 @@ struct code_seg_t
 
 struct trans_table_t
 {
-	/* A row in the page table of the second layer */
 	struct
 	{
-		addr_t v_index; // The index of virtual address
-		addr_t p_index; // The index of physical address
+		addr_t v_index;
+		addr_t p_index;
 	} table[1 << SECOND_LV_LEN];
 	int size;
 };
 
-/* Mapping virtual addresses and physical ones */
 struct page_table_t
 {
-	/* Translation table for the first layer */
 	struct
 	{
-		addr_t v_index; // Virtual index
+		addr_t v_index;
 		struct trans_table_t *next_lv;
 	} table[1 << FIRST_LV_LEN];
-	int size; // Number of row in the first layer
+	int size;
 };
 
 /* PCB, describe information about a process */
 struct pcb_t
 {
 	uint32_t pid;		 // PID
-	uint32_t priority;	 // Default priority, this legacy process based (FIXED)
+	uint32_t priority;	 // Default priority
 	char path[100];
-	struct code_seg_t *code; // Code segment
-	addr_t regs[10];	 // Registers, store address of allocated regions
-	uint64_t pc;		 // Program pointer, point to the next instruction
+	struct code_seg_t *code;
+	addr_t regs[10];
+	uint64_t pc;
 #ifdef MLQ_SCHED
-	// Priority on execution (if supported), on-fly aka. changeable
-	// and this vale overwrites the default priority when it existed
 	uint32_t prio;
 #endif
 
@@ -121,8 +115,8 @@ struct pcb_t
 #endif
 
 	struct krnl_t *krnl;	
-	struct page_table_t *page_table; // Page table
-	uint64_t bp;			 // Break pointer
+	struct page_table_t *page_table;
+	uint64_t bp;
 };
 
 /* Kernel structure */
@@ -138,8 +132,8 @@ struct krnl_t
 	struct memphy_struct *mram;
 	struct memphy_struct **mswp;
 	uint32_t active_mswp_id;
+	struct tlb_t *tlb;           /* <--- ADD TLB HERE */
 #endif
 };
-
 
 #endif
