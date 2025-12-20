@@ -198,7 +198,7 @@ int tlb_insert(struct tlb_t* tlb, addr_t vpn, int fpn, uint32_t pid,
 int tlb_lookup(struct tlb_t* tlb, addr_t vpn, uint32_t pid, int* fpn);
 int tlb_invalidate_entry(struct tlb_t* tlb, addr_t vpn, uint32_t pid);
 int tlb_invalidate_process(struct tlb_t* tlb, uint32_t pid);
-int tlb_set_dirty(struct tlb_t* tlb, addr_t vpn, uint32_t pid);
+int tlb_set_dirty(struct tlb_t* tlb, struct pcb_t* caller, addr_t vpn);
 int tlb_set_referenced(struct tlb_t* tlb, addr_t vpn, uint32_t pid);
 void tlb_get_stats(struct tlb_t* tlb, int* hits, int* misses, float* hit_rate);
 void tlb_dump(struct tlb_t* tlb);

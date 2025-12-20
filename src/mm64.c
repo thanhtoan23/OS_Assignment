@@ -203,6 +203,12 @@ int pte_set_fpn(struct pcb_t *owner, addr_t pgn, addr_t fpn, int is_dirty) {
             owner->pid, pgn, fpn, is_dirty);
     
     /* Don't invalidate TLB here - we want to keep the entry if it exists */
+    // Đây là QUAN ĐIỂM SAI - cần invalidate để đồng bộ
+    
+    // FIX: Invalidate TLB khi PTE thay đổi
+    if (owner->krnl->tlb) {
+        tlb_invalidate_entry(owner->krnl->tlb, pgn, owner->pid);
+    }
     
     SETBIT(*pte, PAGING_PTE_PRESENT_MASK);
     CLRBIT(*pte, PAGING_PTE_SWAPPED_MASK);
@@ -443,7 +449,7 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
             printf("  Rolling back %lu allocated frames\n", pgit);
             while (*frm_lst) {
               struct framephy_struct *temp = *frm_lst;
-              MEMPHY_put_freefp(caller->krnl->mram, temp->fpn); // QUAN TRỌNG: trả frame RAM!
+              MEMPHY_put_freefp(caller->krnl->mram, temp->fpn);
               *frm_lst = (*frm_lst)->fp_next;
               free(temp);
             }
@@ -485,7 +491,7 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
 
         if (found_swp_id == -1) {
           /* TẤT CẢ SWAP ĐỀU ĐẦY - XỬ LÝ DEADLOCK */
-          printf("ALL SWAP DEVICES ARE FULL!\\n");
+          printf("ALL SWAP DEVICES ARE FULL!\n");
           
           /* 1. Giải phóng newfp_str đã cấp phát */
           free(newfp_str);
@@ -495,7 +501,7 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
             printf("  Rolling back %lu allocated frames\n", pgit);
             while (*frm_lst) {
               struct framephy_struct *temp = *frm_lst;
-              MEMPHY_put_freefp(caller->krnl->mram, temp->fpn); // QUAN TRỌNG: trả frame RAM!
+              MEMPHY_put_freefp(caller->krnl->mram, temp->fpn);
               *frm_lst = (*frm_lst)->fp_next;
               free(temp);
             }
@@ -509,7 +515,7 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
           }
           
           printf("ERROR: Cannot allocate pages - swap full and insufficient clean pages\n");
-          return -3000; 
+          return -1; 
         }
         
         printf("Free SWAP frame obtained at SWAP %d: swpfpn=%lu\n", found_swp_id, swpfpn);
@@ -525,12 +531,28 @@ addr_t alloc_pages_range(struct pcb_t *caller, int req_pgnum, struct framephy_st
 
         /* Update victim PTE to point to đúng thiết bị SWAP */
         pte_set_swap(vic_owner, vicpgn, found_swp_id, swpfpn);
+        
+        /* TLB COHERENCE: Invalidate victim TLB entry */
+        if (vic_owner->krnl->tlb) {
+            tlb_invalidate_entry(vic_owner->krnl->tlb, vicpgn, vic_owner->pid);
+            printf("  Invalidated TLB entry for swapped out victim in alloc_pages_range: VPN %lu (PID=%d)\n",
+                   vicpgn, vic_owner->pid);
+        }
+        
         printf("Updated VICTIM PTE (PID=%d, pgn=%lu) to point to SWAP %d(%lu)\n",
               vic_owner->pid, vicpgn, found_swp_id, swpfpn);
       } else {
         printf("VICTIM is CLEAN (dirty=0), no need to write to SWAP\n");
         /* Chỉ cần invalidate PTE của victim */
         pte_set_entry(vic_owner, vicpgn, 0);
+        
+        /* TLB COHERENCE: Invalidate clean victim TLB entry */
+        if (vic_owner->krnl->tlb) {
+            tlb_invalidate_entry(vic_owner->krnl->tlb, vicpgn, vic_owner->pid);
+            printf("  Invalidated TLB entry for clean victim in alloc_pages_range: VPN %lu (PID=%d)\n",
+                   vicpgn, vic_owner->pid);
+        }
+        
         printf("Invalidated VICTIM PTE (PID=%d, pgn=%lu)\n",
               vic_owner->pid, vicpgn);
       }

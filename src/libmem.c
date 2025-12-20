@@ -294,11 +294,11 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
         struct sc_regs regs;
         int is_swapped = (old_pte & PAGING_PTE_SWAPPED_MASK);
         addr_t old_swpfpn = 0;
-        int old_swp_id = 0; // Thêm biến lưu ID swap cũ
+        int old_swp_id = 0;
 
         if (is_swapped) {
             old_swpfpn = PAGING_SWP(old_pte);
-            old_swp_id = PAGING_PTE_GET_SWPTYP(old_pte); // Lấy swap device ID từ PTE
+            old_swp_id = PAGING_PTE_GET_SWPTYP(old_pte);
             printf("Page is in SWAP %d at swpfpn=%lu\n", old_swp_id, old_swpfpn);
         } else {
             printf("Page not in SWAP (first access)\n");
@@ -318,27 +318,43 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
                 regs.a2 = old_swpfpn;
                 regs.a3 = tgtfpn;
                 regs.a4 = 1;          // Direction IN
-                regs.a5 = old_swp_id; // Chọn đúng vùng swap chứa trang
+                regs.a5 = old_swp_id;
                 syscall(caller->krnl, caller->pid, 17, &regs);
                 
                 MEMPHY_put_freefp(caller->krnl->mswp[old_swp_id], old_swpfpn);
                 printf("Freed swap frame %lu back to SWAP %d\n", old_swpfpn, old_swp_id);
                 
-                // SWAP IN: dirty = 0 (trang từ swap về chưa bị sửa)
+                // SWAP IN: dirty = 0
                 pte_set_fpn(caller, pgn, tgtfpn, 0);
+                
+                // TLB COHERENCE: Invalidate stale entry
+                if (caller->krnl->tlb) {
+                    tlb_invalidate_entry(caller->krnl->tlb, pgn, caller->pid);
+                    printf("  Invalidated TLB entry after swap in: VPN %d (PID=%d)\n",
+                           pgn, caller->pid);
+                }
+                
                 printf("Updated PTE for pgn=%d -> fpn=%lu (dirty=0, swap in)\n", pgn, tgtfpn);
             } 
             else 
             {
                 printf("First allocation in RAM at fpn=%lu\n", tgtfpn);
-                // TẠO MỚI: dirty = 1 (trang mới cấp phát cần được ghi xuống swap nếu bị đuổi)
+                // TẠO MỚI: dirty = 1
                 pte_set_fpn(caller, pgn, tgtfpn, 1);
+                
+                // TLB COHERENCE: Invalidate any existing entry
+                if (caller->krnl->tlb) {
+                    tlb_invalidate_entry(caller->krnl->tlb, pgn, caller->pid);
+                    printf("  Invalidated TLB entry for new page: VPN %d (PID=%d)\n",
+                           pgn, caller->pid);
+                }
+                
                 printf("Updated PTE for pgn=%d -> fpn=%lu (dirty=1, new page)\n", pgn, tgtfpn);
             }
         } 
         else 
         {
-            // --- 2. RAM FULL - THAY THẾ TRANG (ROUND ROBIN) ---
+            // --- 2. RAM FULL - THAY THẾ TRANG (CLOCK Algorithm) ---
             printf("RAM FULL! Need to find VICTIM for SWAP OUT\n");
             
             addr_t vicpgn, vicfpn, swpfpn;
@@ -378,22 +394,39 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
                 printf("Free SWAP frame obtained at SWAP %d: swpfpn=%lu\n", found_swp_id, swpfpn);
 
                 // Swap Out: RAM -> SWAP được chọn
-                printf("SWAP OUT: RAM(%lu) -> SWAP %d(%lu) because dirty=1\n", vicfpn, found_swp_id, swpfpn);
+                printf("SWAP OUT: RAM(%lu) -> SWAP %d(%lu) because dirty=1\n", 
+                       vicfpn, found_swp_id, swpfpn);
                 regs.a1 = SYSMEM_SWP_OP;
                 regs.a2 = vicfpn;
                 regs.a3 = swpfpn;
                 regs.a4 = 0;            // Direction OUT
-                regs.a5 = found_swp_id; // Chọn vùng swap đích
+                regs.a5 = found_swp_id;
                 syscall(caller->krnl, caller->pid, 17, &regs);
 
-                // Cập nhật PTE nạn nhân với đúng ID vùng swap
+                // Update victim PTE với đúng ID vùng swap
                 pte_set_swap(vic_owner, vicpgn, found_swp_id, swpfpn);
+                
+                // TLB COHERENCE: Invalidate victim TLB entry
+                if (vic_owner->krnl->tlb) {
+                    tlb_invalidate_entry(vic_owner->krnl->tlb, vicpgn, vic_owner->pid);
+                    printf("  Invalidated TLB entry for swapped out victim: VPN %lu (PID=%d)\n",
+                           vicpgn, vic_owner->pid);
+                }
+                
                 printf("Updated VICTIM PTE (PID=%d, pgn=%lu) to point to SWAP %d(%lu)\n",
                         vic_owner->pid, vicpgn, found_swp_id, swpfpn);
             } else {
                 printf("VICTIM is CLEAN (dirty=0), no need to write to SWAP\n");
                 // Chỉ cần invalidate PTE của victim
                 pte_set_entry(vic_owner, vicpgn, 0);
+                
+                // TLB COHERENCE: Invalidate clean victim TLB entry
+                if (vic_owner->krnl->tlb) {
+                    tlb_invalidate_entry(vic_owner->krnl->tlb, vicpgn, vic_owner->pid);
+                    printf("  Invalidated TLB entry for clean victim: VPN %lu (PID=%d)\n",
+                           vicpgn, vic_owner->pid);
+                }
+                
                 printf("Invalidated VICTIM PTE (PID=%d, pgn=%lu)\n",
                         vic_owner->pid, vicpgn);
             }
@@ -410,7 +443,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
                 regs.a2 = old_swpfpn;
                 regs.a3 = tgtfpn;
                 regs.a4 = 1;          // Direction IN
-                regs.a5 = old_swp_id; // Chọn đúng vùng swap nguồn
+                regs.a5 = old_swp_id;
                 syscall(caller->krnl, caller->pid, 17, &regs);
 
                 MEMPHY_put_freefp(caller->krnl->mswp[old_swp_id], old_swpfpn);
@@ -418,11 +451,27 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
                 
                 // SWAP IN: dirty = 0
                 pte_set_fpn(caller, pgn, tgtfpn, 0);
+                
+                // TLB COHERENCE: Invalidate TLB entry after swap in
+                if (caller->krnl->tlb) {
+                    tlb_invalidate_entry(caller->krnl->tlb, pgn, caller->pid);
+                    printf("  Invalidated TLB entry after victim replacement swap in: VPN %d (PID=%d)\n",
+                           pgn, caller->pid);
+                }
+                
                 printf("Updated PTE for pgn=%d -> fpn=%lu (dirty=0, swap in)\n", pgn, tgtfpn);
             } else {
                 printf("New page allocated to RAM frame %lu\n", tgtfpn);
                 // TẠO MỚI: dirty = 1
                 pte_set_fpn(caller, pgn, tgtfpn, 1);
+                
+                // TLB COHERENCE: Invalidate TLB entry for new page
+                if (caller->krnl->tlb) {
+                    tlb_invalidate_entry(caller->krnl->tlb, pgn, caller->pid);
+                    printf("  Invalidated TLB entry for new page after victim replacement: VPN %d (PID=%d)\n",
+                           pgn, caller->pid);
+                }
+                
                 printf("Updated PTE for pgn=%d -> fpn=%lu (dirty=1, new page)\n", pgn, tgtfpn);
             }
         }
@@ -435,19 +484,18 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
     } else {
         /*
          * Trường hợp trang ĐÃ PRESENT (đã được khởi tạo/ánh xạ trong bảng trang)
-         * Cần kiểm tra xem nó đang thực sự nằm ở RAM hay đang bị SWAP OUT.
          */
         int is_swapped = (old_pte & PAGING_PTE_SWAPPED_MASK);
 
         if (is_swapped) 
         {
             /*
-             * TRƯỜNG HỢP 1: Trang đang ở SWAP
+             * TRƯỜNG HỢP: Trang đang ở SWAP
              */
             printf("Page is present but currently SWAPPED OUT. Triggering Swap-In...\n");
             
             addr_t old_swpfpn = PAGING_SWP(old_pte);
-            int old_swp_id = PAGING_PTE_GET_SWPTYP(old_pte); // Lấy swap device ID
+            int old_swp_id = PAGING_PTE_GET_SWPTYP(old_pte);
             addr_t tgtfpn;
             struct sc_regs regs;
 
@@ -487,13 +535,27 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
                     regs.a2 = vicfpn; 
                     regs.a3 = swpfpn;
                     regs.a4 = 0;             // OUT
-                    regs.a5 = found_swp_id;  // Chọn vùng swap đích
+                    regs.a5 = found_swp_id;
                     syscall(caller->krnl, caller->pid, 17, &regs);
 
                     pte_set_swap(vic_owner, vicpgn, found_swp_id, swpfpn);
+                    
+                    // TLB COHERENCE: Invalidate victim TLB entry
+                    if (vic_owner->krnl->tlb) {
+                        tlb_invalidate_entry(vic_owner->krnl->tlb, vicpgn, vic_owner->pid);
+                        printf("  Invalidated TLB entry for swapped out victim: VPN %lu (PID=%d)\n",
+                               vicpgn, vic_owner->pid);
+                    }
                 } else {
                     // Clean victim, no swap needed
                     pte_set_entry(vic_owner, vicpgn, 0);
+                    
+                    // TLB COHERENCE: Invalidate clean victim TLB entry
+                    if (vic_owner->krnl->tlb) {
+                        tlb_invalidate_entry(vic_owner->krnl->tlb, vicpgn, vic_owner->pid);
+                        printf("  Invalidated TLB entry for clean victim: VPN %lu (PID=%d)\n",
+                               vicpgn, vic_owner->pid);
+                    }
                 }
 
                 tgtfpn = vicfpn;
@@ -504,7 +566,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
             regs.a2 = old_swpfpn;
             regs.a3 = tgtfpn;
             regs.a4 = 1;          // IN
-            regs.a5 = old_swp_id; // Chọn đúng vùng swap nguồn
+            regs.a5 = old_swp_id;
             syscall(caller->krnl, caller->pid, 17, &regs);
 
             // 3. Trả lại slot Swap cũ và cập nhật PTE
@@ -512,6 +574,13 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
             
             // SWAP IN: dirty = 0
             pte_set_fpn(caller, pgn, tgtfpn, 0);
+            
+            // TLB COHERENCE: Invalidate TLB entry for swapped-in page
+            if (caller->krnl->tlb) {
+                tlb_invalidate_entry(caller->krnl->tlb, pgn, caller->pid);
+                printf("  Invalidated TLB entry for swapped-in page: VPN %d (PID=%d)\n",
+                       pgn, caller->pid);
+            }
             
             // 4. Đưa vào danh sách FIFO
             enlist_pgn_node(&caller->krnl->mm->fifo_pgn, pgn, caller);
@@ -521,7 +590,7 @@ int pg_getpage(struct mm_struct *mm, int pgn, int *fpn, struct pcb_t *caller)
         else 
         {
             /*
-             * TRƯỜNG HỢP 2: Trang thực sự đang nằm trong RAM
+             * TRƯỜNG HỢP: Trang thực sự đang nằm trong RAM
              */
             printf("Page already in RAM\n");
             *fpn = PAGING_FPN(old_pte);
@@ -621,7 +690,7 @@ int pg_setval(struct mm_struct *mm, addr_t addr, BYTE value, struct pcb_t *calle
         
         /* Update bits in TLB */
         tlb_set_referenced(caller->krnl->tlb, pgn, caller->pid);
-        tlb_set_dirty(caller->krnl->tlb, pgn, caller->pid);
+        tlb_set_dirty(caller->krnl->tlb, caller, pgn);
     } else {
         /* TLB MISS - go through normal page lookup */
         printf("  TLB MISS for VPN %lu\n", pgn);

@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "os-mm.h"
+#include "mm.h"
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -50,35 +51,39 @@ static struct tlb_entry_t* tlb_find_entry(struct tlb_t* tlb, addr_t vpn, uint32_
 static struct tlb_entry_t** tlb_find_lru_victim(struct tlb_t* tlb, int index) {
     struct tlb_entry_t** victim = &tlb->entries[index];
     struct tlb_entry_t* current = tlb->entries[index];
-    uint64_t oldest_time = tlb->access_counter + 1; /* Initialize to future time */
+    struct tlb_entry_t** lru_victim = victim;
+    uint64_t oldest_time = tlb->access_counter + 1;
     
+    // Tìm invalid entry trước
     while (current != NULL) {
         if (!current->valid) {
-            /* Found invalid entry, use it immediately */
-            victim = &tlb->entries[index];
-            struct tlb_entry_t* curr = tlb->entries[index];
-            while (curr != NULL) {
-                if (curr == current) break;
-                victim = &(*victim)->next;
-                curr = curr->next;
+            // Trả về con trỏ trỏ đến invalid entry này
+            struct tlb_entry_t** found = victim;
+            struct tlb_entry_t* temp = tlb->entries[index];
+            
+            while (temp != current) {
+                found = &(*found)->next;
+                temp = temp->next;
             }
-            return victim;
-        }
-        
-        if (current->last_used < oldest_time) {
-            oldest_time = current->last_used;
-            victim = &tlb->entries[index];
-            struct tlb_entry_t* curr = tlb->entries[index];
-            while (curr != NULL) {
-                if (curr == current) break;
-                victim = &(*victim)->next;
-                curr = curr->next;
-            }
+            return found;
         }
         current = current->next;
     }
     
-    return victim;
+    // Nếu không có invalid, tìm LRU
+    current = tlb->entries[index];
+    victim = &tlb->entries[index];
+    
+    while (current != NULL) {
+        if (current->last_used < oldest_time) {
+            oldest_time = current->last_used;
+            lru_victim = victim;
+        }
+        victim = &(*victim)->next;
+        current = current->next;
+    }
+    
+    return lru_victim;
 }
 
 /* Insert/Update TLB entry */
@@ -100,6 +105,9 @@ int tlb_insert(struct tlb_t* tlb, addr_t vpn, int fpn, uint32_t pid,
         struct tlb_entry_t** victim_ptr = tlb_find_lru_victim(tlb, index);
         struct tlb_entry_t* victim = *victim_ptr;
         
+        // BUG: Nếu victim là NULL (chain trống), victim_ptr trỏ đến entries[index]
+        // nhưng *victim_ptr là NULL, gán victim = malloc() không update entries[index]
+        
         if (victim == NULL) {
             /* No entry in this chain, create new */
             victim = malloc(sizeof(struct tlb_entry_t));
@@ -107,7 +115,7 @@ int tlb_insert(struct tlb_t* tlb, addr_t vpn, int fpn, uint32_t pid,
                 pthread_mutex_unlock(&tlb_lock);
                 return -1;
             }
-            *victim_ptr = victim;
+            *victim_ptr = victim;  // ĐÚNG: Cập nhật con trỏ
             victim->next = NULL;
         } else if (!victim->valid) {
             /* Reuse invalid entry */
@@ -191,13 +199,19 @@ int tlb_invalidate_process(struct tlb_t* tlb, uint32_t pid) {
     return 0;
 }
 
-/* Set dirty bit in TLB */
-int tlb_set_dirty(struct tlb_t* tlb, addr_t vpn, uint32_t pid) {
+int tlb_set_dirty(struct tlb_t* tlb, struct pcb_t* caller, addr_t vpn) {
     pthread_mutex_lock(&tlb_lock);
     
-    struct tlb_entry_t* entry = tlb_find_entry(tlb, vpn, pid);
+    struct tlb_entry_t* entry = tlb_find_entry(tlb, vpn, caller->pid);
     if (entry != NULL && entry->valid) {
         entry->dirty = 1;
+        
+        // Update PTE dirty bit
+        uint32_t pte = pte_get_entry(caller, vpn);
+        if (pte != (uint32_t)-1) {
+            SETBIT(pte, PAGING_PTE_DIRTY_MASK);
+            pte_set_entry(caller, vpn, pte);
+        }
     }
     
     pthread_mutex_unlock(&tlb_lock);
