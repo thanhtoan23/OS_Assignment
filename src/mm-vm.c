@@ -260,6 +260,7 @@ int inc_vma_limit(struct pcb_t *caller, int vmaid, addr_t inc_sz)
   }
   
   cur_vma->sbrk += inc_amt;
+  cur_vma->vm_end = cur_vma->sbrk;
   return 0;
 }
 
