@@ -1,5 +1,5 @@
-20 4
-alloc 8000 1
-syscall 17 5 12 10
-syscall 17 3 0 0 1
-syscall 17 5 22 20
+10 4
+alloc 12000 1
+write 12 1 10
+read 1 12 2
+syscall 50

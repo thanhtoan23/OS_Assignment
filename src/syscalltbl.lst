@@ -1,3 +1,7 @@
-__SYSCALL(0, sys_listsyscall)
-__SYSCALL(17, sys_memmap)
-__SYSCALL(440, sys_xxxhandler)
+__SYSCALL(0, sys_listsyscall)
+__SYSCALL(17, sys_memmap)
+__SYSCALL(20, sys_dump)
+__SYSCALL(30, sys_printpgtbl)
+__SYSCALL(50, sys_print_regs)
+__SYSCALL(60, sys_print_tlb)
+__SYSCALL(440, sys_xxxhandler)
