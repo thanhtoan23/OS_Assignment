@@ -17,3 +17,5 @@
 440     xxx         sys_xxxhandler
 20      dump        sys_dump
 30      printpgtbl      sys_printpgtbl
+50      print_regs      sys_print_regs
+60      print_tlb       sys_print_tlb

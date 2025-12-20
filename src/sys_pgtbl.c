@@ -9,8 +9,8 @@
 static pthread_mutex_t dump_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int __sys_printpgtbl(struct krnl_t *krnl, uint32_t pid, struct sc_regs *regs) {
+    pthread_mutex_lock(&dump_lock);
     
-    /* 1. Tìm PCB của tiến trình đang gọi dựa vào PID */
     struct pcb_t *caller = NULL;
     struct queue_t *q = krnl->running_list;
 

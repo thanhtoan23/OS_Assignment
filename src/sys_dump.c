@@ -7,7 +7,7 @@
 static pthread_mutex_t dump_lock = PTHREAD_MUTEX_INITIALIZER;
 
 int __sys_dump(struct krnl_t *krnl, uint32_t pid, struct sc_regs *regs) {
-    
+    pthread_mutex_lock(&dump_lock);
     printf("--- [SYSCALL DUMP] Request from PID: %d ---\n", pid);
 
     if (krnl->mram == NULL) {
