@@ -1,9 +1,5 @@
-10 7
+10 4
 alloc 12000 1
-alloc 4000 2
-write 10 2 16
-syscall 60
-write 20 1 8000
-syscall 60
-write 30 1 24
-
+write 12 1 10
+read 1 12 2
+syscall 50

@@ -10,7 +10,6 @@ int __sys_print_regs(struct krnl_t *krnl, uint32_t pid, struct sc_regs *regs) {
     pthread_mutex_lock(&regs_lock);
     struct pcb_t *caller = NULL;
     struct queue_t *q = krnl->running_list;
-
     for (int i = 0; i < q->size; ++i) {
         struct pcb_t *proc = q->proc[i];
         if (proc->pid == pid) {
