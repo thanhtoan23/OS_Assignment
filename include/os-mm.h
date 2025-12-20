@@ -51,7 +51,7 @@ typedef ADDR_TYPE addr_t;
 /* TLB Entry Structure (LRU implementation) */
 struct tlb_entry_t {
     addr_t vpn;           /* Virtual Page Number */
-    addr_t fpn;           /* Frame Physical Number */
+    int fpn;           /* Frame Physical Number */
     uint8_t valid;        /* Valid bit */
     uint8_t dirty;        /* Dirty bit */
     uint8_t referenced;   /* Referenced bit */

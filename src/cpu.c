@@ -8,9 +8,34 @@
 
 static pthread_mutex_t log_lock = PTHREAD_MUTEX_INITIALIZER;
 
-int calc(struct pcb_t *proc)
-{
-	printf("PID: %d. Calc...\n", proc->pid);
+int calc(struct pcb_t *proc, int reg_index, addr_t val, int calc)
+{	
+	switch (calc)
+	{
+	case 0:
+		printf("PID: %d. CALC: %ld + %ld = %ld\n", proc->pid, proc->regs[reg_index], val, proc->regs[reg_index] + val);
+		proc->regs[reg_index] = proc->regs[reg_index] + val;
+		break;
+	case 1:
+		printf("PID: %d. CALC: %ld - %ld = %ld\n", proc->pid, proc->regs[reg_index], val, proc->regs[reg_index] - val);
+		proc->regs[reg_index] = proc->regs[reg_index] - val;
+		break;
+	case 2:
+		printf("PID: %d. CALC: %ld * %ld = %ld\n", proc->pid, proc->regs[reg_index], val, proc->regs[reg_index] * val);
+		proc->regs[reg_index] = proc->regs[reg_index] * val;
+		break;
+	case 3:
+		printf("PID: %d. CALC: %ld / %ld = %ld\n", proc->pid, proc->regs[reg_index], val, proc->regs[reg_index] / val);
+		proc->regs[reg_index] = proc->regs[reg_index] / val;
+		break;
+	case 4:
+		printf("PID: %d. CALC: %ld MOD %ld = %ld\n", proc->pid, proc->regs[reg_index], val, proc->regs[reg_index] % val);
+		proc->regs[reg_index] = proc->regs[reg_index] % val;
+		break;	
+	default:
+		printf("PID: %d. CALC: %ld + %ld = %ld\n", proc->pid, proc->regs[reg_index], val, proc->regs[reg_index] + val);
+		break;
+	}
 	return ((unsigned long)proc & 0UL);
 }
 
@@ -78,7 +103,7 @@ int run(struct pcb_t *proc)
 switch (ins.opcode)
 	{
 	case CALC:
-		stat = calc(proc);
+		stat = calc(proc, ins.arg_0, ins.arg_1, ins.arg_2);
 		break;
 	case ALLOC:
 #ifdef MM_PAGING
@@ -96,7 +121,7 @@ switch (ins.opcode)
 		break;
 	case READ:
 #ifdef MM_PAGING
-		stat = libread(proc, ins.arg_0, ins.arg_1, (uint32_t*) &ins.arg_2);
+		stat = libread(proc, ins.arg_0, ins.arg_1, ins.arg_2);
 #else
 		stat = read(proc, ins.arg_0, ins.arg_1, ins.arg_2);
 #endif

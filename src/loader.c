@@ -68,6 +68,13 @@ struct pcb_t * load(const char * path) {
 		proc->code->text[i].opcode = get_opcode(opcode);
 		switch(proc->code->text[i].opcode) {
 		case CALC:
+			fscanf(
+				file,
+				"" FORMAT_ARG " " FORMAT_ARG " " FORMAT_ARG "\n",
+				&proc->code->text[i].arg_0,
+				&proc->code->text[i].arg_1,
+				&proc->code->text[i].arg_2
+			);
 			break;
 		case ALLOC:
 			fscanf(
