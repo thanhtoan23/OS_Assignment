@@ -74,7 +74,7 @@ struct pcb_t * get_mlq_proc(void) {
 
 
 	int retry_count = 0;
-	const int MAX_RETRIES = 2;
+	const int MAX_RETRIES = 100;
 
 	while (queue_empty() && retry_count < MAX_RETRIES) {
 		pthread_mutex_unlock(&queue_lock); 

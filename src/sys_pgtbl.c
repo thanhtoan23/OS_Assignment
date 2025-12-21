@@ -8,7 +8,7 @@
 
 static pthread_mutex_t dump_lock = PTHREAD_MUTEX_INITIALIZER;
 
-int __sys_printpgtbl(struct krnl_t *krnl, uint32_t pid, struct sc_regs *regs) {
+int __sys_print_pgtbl(struct krnl_t *krnl, uint32_t pid, struct sc_regs *regs) {
     pthread_mutex_lock(&dump_lock);
     
     struct pcb_t *caller = NULL;
@@ -33,5 +33,7 @@ int __sys_printpgtbl(struct krnl_t *krnl, uint32_t pid, struct sc_regs *regs) {
     // Tham số 0, -1 nghĩa là in toàn bộ dải địa chỉ hợp lệ
     print_pgtbl(caller, 0, -1); 
     pthread_mutex_unlock(&dump_lock);
+    printf("=============LIST VMA+==============\n");
+    print_list_vma(caller->mm->mmap);
     return 0;
 }
